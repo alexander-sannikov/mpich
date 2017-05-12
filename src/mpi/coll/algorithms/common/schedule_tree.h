@@ -34,24 +34,24 @@ static inline int COLL_tree_dump(int tree_size, int root, int k)
     int i;
     const char *name = "collective tree";
 
-    fprintf(stderr, "digraph \"%s%d\" {\n", name, k);
+    MPIC_DBG("digraph \"%s%d\" {\n", name, k);
 
     for (i = 0; i < tree_size; i++) {
         COLL_tree_t ct;
         COLL_tree_init(i, tree_size, k, root, &ct);
-        fprintf(stderr, "%d -> %d\n", ct.rank, ct.parent);
+        MPIC_DBG("%d -> %d\n", ct.rank, ct.parent);
         int j;
 
         for (j = 0; j < ct.numRanges; j++) {
             int k;
 
             for (k = ct.children[j].startRank; k <= ct.children[j].endRank; k++) {
-                fprintf(stderr, "%d -> %d\n", ct.rank, k);
+                MPIC_DBG("%d -> %d\n", ct.rank, k);
             }
         }
     }
 
-    fprintf(stderr, "}\n");
+    MPIC_DBG("}\n");
     return 0;
 }
 
@@ -187,18 +187,15 @@ COLL_sched_reduce_tree(const void *sendbuf,
         result_buf = (void *) ((char *) result_buf - lb);
         target_buf = result_buf;
     }
-    if (0)
-        fprintf(stderr, "num_ranks: %d, is_root: %d, is_inplace: %d, is_intermediate: %d, lb: %d\n",
+    MPIC_DBG("num_ranks: %d, is_root: %d, is_inplace: %d, is_intermediate: %d, lb: %d\n",
                 size, is_root, is_inplace, is_intermediate, lb);
     if ((is_root && !is_inplace) || (is_intermediate)) {
-        if (0)
-            fprintf(stderr, "scheduling data copy\n");
+        MPIC_DBG("scheduling data copy\n");
         dtcopy_id =
             TSP_dtcopy_nb(target_buf, count, datatype, sendbuf, count, datatype, sched, 0, NULL);
     }
 
-    if (0)
-        fprintf(stderr, "Allocating buffer for receiving data\n");
+    MPIC_DBG( "Allocating buffer for receiving data\n");
     /*allocate buffer space to receive data from children */
     void **childbuf;
     childbuf = (void **) TSP_allocate_mem(sizeof(void *) * num_children);
@@ -221,8 +218,7 @@ COLL_sched_reduce_tree(const void *sendbuf,
         }
     }
 
-    if (0)
-        fprintf(stderr, "Start receiving data\n");
+    MPIC_DBG( "Start receiving data\n");
     child_count = 0;
     for (i = 0; i < tree->numRanges; i++) {
         for (j = tree->children[i].startRank; j <= tree->children[i].endRank; j++, child_count++) {
@@ -240,30 +236,25 @@ COLL_sched_reduce_tree(const void *sendbuf,
                     nvtcs = 1;
                 }
             }
-            if (0)
-                fprintf(stderr, "Schedule receive from child %d\n", j);
-            if (0)
-                fprintf(stderr, "Posting receive at address %p\n", childbuf[child_count]);
+            MPIC_DBG("Schedule receive from child %d\n", j);
+            MPIC_DBG("Posting receive at address %p\n", childbuf[child_count]);
             /*post the recv */
             recv_id[child_count] = TSP_recv(childbuf[child_count], count, datatype,
                                             j, tag, tsp_comm, sched, nvtcs, vtcs);
 
-            if (0)
-                fprintf(stderr, "receive scheduled\n");
+            MPIC_DBG("receive scheduled\n");
             /*Reduction depends on the data copy to complete */
             nvtcs = 0;
             if ((is_root && !is_inplace) || is_intermediate) {  //this is when data copy was done
                 nvtcs = 1;
                 vtcs[0] = dtcopy_id;
             }
-            if (0)
-                fprintf(stderr, "added datacopy dependency (if applicable)\n");
+            MPIC_DBG( "added datacopy dependency (if applicable)\n");
             /*reduction depends on the corresponding recv to complete */
             vtcs[nvtcs] = recv_id[child_count];
             nvtcs += 1;
 
-            if (0)
-                fprintf(stderr, "schedule reduce\n");
+            MPIC_DBG( "schedule reduce\n");
             if (is_commutative) {       /*reduction order does not matter */
                 reduce_id[child_count] = TSP_reduce_local(childbuf[child_count], target_buf, count,
                                                           datatype, op, TSP_FLAG_REDUCE_L, sched,
@@ -285,8 +276,7 @@ COLL_sched_reduce_tree(const void *sendbuf,
     }
 
     if (!is_root) {
-        if (0)
-            fprintf(stderr, "schedule send to parent %d\n", tree->parent);
+        MPIC_DBG( "schedule send to parent %d\n", tree->parent);
         if (is_leaf) {
             nvtcs = 0;  /*just send the data to parent */
             target_buf = sendbuf;
@@ -305,8 +295,7 @@ COLL_sched_reduce_tree(const void *sendbuf,
         TSP_send(target_buf, count, datatype, tree->parent, tag, tsp_comm, sched, nvtcs, vtcs);
     }
 
-    if (0)
-        fprintf(stderr, "completed schedule generation\n");
+    MPIC_DBG("completed schedule generation\n");
     TSP_free_mem(childbuf);
     TSP_free_mem(vtcs);
     TSP_free_mem(recv_id);
