@@ -185,7 +185,7 @@ COLL_sched_reduce_tree(const void *sendbuf,
         result_buf = (void *) ((char *) result_buf - lb);
         target_buf = result_buf;
     }
-    if(0) fprintf(stderr, "is_root: %d, is_inplace: %d, is_intermediate: %d, lb: %d\n", is_root, is_inplace, is_intermediate, lb);
+    if(0) fprintf(stderr, "num_ranks: %d, is_root: %d, is_inplace: %d, is_intermediate: %d, lb: %d\n", size, is_root, is_inplace, is_intermediate, lb);
     if((is_root && !is_inplace) || (is_intermediate)){
         if(0)fprintf(stderr, "scheduling data copy\n");
         dtcopy_id = TSP_dtcopy_nb(target_buf, count, datatype, sendbuf, count, datatype,sched,0,NULL);
@@ -251,6 +251,8 @@ COLL_sched_reduce_tree(const void *sendbuf,
             
             if(0) fprintf(stderr, "schedule reduce\n");
             if (is_commutative) {/*reduction order does not matter*/
+                reduce_id[child_count] = TSP_reduce_local(childbuf[child_count],target_buf, count,
+                                                       datatype,op, TSP_FLAG_REDUCE_L,sched, nvtcs, vtcs);
             }
             else{
                  /* non commutative case. Order of reduction matters. Knomia tree has to constructed differently for reduce for optimal performace. 
@@ -260,9 +262,9 @@ COLL_sched_reduce_tree(const void *sendbuf,
                     vtcs[nvtcs] = reduce_id[child_count-1]; 
                     nvtcs++;
                 }
+                reduce_id[child_count] = TSP_reduce_local(childbuf[child_count],target_buf, count,
+                                                       datatype,op, TSP_FLAG_REDUCE_R,sched, nvtcs, vtcs);
             }
-            reduce_id[child_count] = TSP_reduce_local(childbuf[child_count],target_buf, count,
-                                                       datatype,op, sched, nvtcs, vtcs);
         }
    }
     
