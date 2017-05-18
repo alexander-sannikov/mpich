@@ -22,13 +22,9 @@ static inline int MPIC_BMPICH_init()
 
 static inline int MPIC_BMPICH_comm_init(MPIC_BMPICH_comm_t * comm, void *base)
 {
-    MPIR_Comm *mpi_comm = container_of(base, MPIR_Comm, ch4_coll);
+    MPIR_Comm *mpi_comm = container_of(base, MPIR_Comm, coll);
     comm->mpid_comm = mpi_comm;
-}
-
-static inline int MPIC_BMPICH_comm_cleanup(MPIC_BMPICH_comm_t * comm)
-{
-    comm->mpid_comm = NULL;
+    comm->sched_cache = NULL;
 }
 
 static inline void MPIC_BMPICH_sched_init(MPIC_BMPICH_sched_t * sched, int tag)
@@ -116,6 +112,7 @@ and also add vtx to the outgoing edge list of vertices in inedges*/
 static inline void MPIC_BMPICH_add_vtx_dependencies(MPIC_BMPICH_sched_t * sched, int vtx,
                                                     int n_invtcs, int *invtcs)
 {
+
 }
 
 /*This function should go away, keeping it there for smooth transition
@@ -607,6 +604,44 @@ static inline void MPIC_BMPICH_free_buffers(MPIC_BMPICH_sched_t * s)
     for (i = 0; i < s->nbufs; i++) {
         MPIC_BMPICH_free_mem(s->buf[i]);
     }
+}
+
+static inline void MPIC_BMPICH_sched_destroy_fn(MPIC_BMPICH_sched_t * s)
+{
+    MPIC_BMPICH_free_buffers(s);
+    MPL_free(s);
+}
+
+static inline int MPIC_BMPICH_comm_cleanup(MPIC_BMPICH_comm_t * comm)
+{
+    MPIC_delete_sched_table(
+            comm->sched_cache,
+            (MPIC_sched_free_fn)MPIC_BMPICH_sched_destroy_fn);
+    comm->mpid_comm = NULL;
+}
+
+static inline void MPIC_BMPICH_sched_cache_store( MPIC_BMPICH_comm_t *comm,
+                                    void* key, int len, void* s)
+{
+    MPIC_add_sched( &(comm->sched_cache), key, len, s);
+}
+
+static inline MPIC_BMPICH_sched_t* MPIC_BMPICH_sched_get(
+                    MPIC_BMPICH_comm_t *comm,
+            void* key, int len, int tag, int *is_new)
+{
+    MPIC_BMPICH_sched_t* s = MPIC_get_sched(comm->sched_cache, key, len);
+    if (s) {
+        MPIC_DBG("schedule is loaded from cache[%lX]\n",s);
+        *is_new = 0;
+        MPIC_BMPICH_sched_reset(s,tag);
+    } else {
+        *is_new = 1;
+        s = MPL_malloc(sizeof(MPIC_BMPICH_sched_t));
+        MPIC_DBG("Schedule is created:[%lX]\n",s);
+        MPIC_BMPICH_sched_init(s,tag);
+    }
+    return s;
 }
 
 #endif

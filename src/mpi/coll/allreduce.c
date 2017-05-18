@@ -334,13 +334,13 @@ int MPIR_Allreduce_intra (
                 case 1:
                     mpi_errno = MPIC_MPICH_KNOMIAL_allreduce(sendbuf, recvbuf, count,
                                                     datatype, op,
-                                                    &(MPIC_COMM(comm_ptr)->mpich_knomial), errflag, 2);
+                                                    &(MPIC_COMM(comm_ptr)->mpich_knomial), (int*) errflag, 2);
                     goto fn_exit;
                     break;
                 case 2:
                     mpi_errno = MPIC_MPICH_KARY_allreduce(sendbuf, recvbuf, count,
                                                     datatype, op,
-                                                    &(MPIC_COMM(comm_ptr)->mpich_kary), errflag, 2);
+                                                    &(MPIC_COMM(comm_ptr)->mpich_kary),(int*) errflag, 2);
                     goto fn_exit;
                     break;
                 case 3:

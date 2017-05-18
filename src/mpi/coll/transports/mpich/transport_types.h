@@ -28,6 +28,7 @@ typedef MPI_Op MPIC_MPICH_op_t;
 
 typedef struct MPIC_MPICH_comm_t {
     struct MPIR_Comm *mpid_comm;
+    MPIC_sched_entry_t *sched_cache;
 } MPIC_MPICH_comm_t;
 
 typedef struct MPIC_MPICH_aint_t {
@@ -143,13 +144,14 @@ typedef struct MPIC_MPICH_vtx_t {
 
 typedef struct MPIC_MPICH_sched_t {
     int tag;
+    int sched_started;
+    uint64_t total;
     uint64_t num_completed;
     uint64_t last_wait;         /*used by TSP_wait, to keep track of the last TSP_wait vtx id */
     //MPIC_MPICH_req_t  requests[MPIC_MPICH_MAX_REQUESTS];
     MPIC_MPICH_vtx_t *vtcs;
     int max_vtcs;
     int max_edges_per_vtx;
-    uint64_t total;
     /*Store the memory location of all the buffers that were temporarily
      * allocated to execute the schedule. This information is later used
      * to free those memory locations when the schedule is destroyed (MPIC_MPICH_free_sched_mem)

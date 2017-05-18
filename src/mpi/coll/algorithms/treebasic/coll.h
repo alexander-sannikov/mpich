@@ -50,7 +50,7 @@ static inline int COLL_init()
 static inline int COLL_comm_init(COLL_comm_t * comm, int id, int *tag, int rank, int size)
 {
     comm->id = id;
-    comm->mpir_comm = container_of(COLL_COMM_BASE(comm), MPIR_Comm, ch4_coll);
+    comm->mpir_comm = container_of(COLL_COMM_BASE(comm), MPIR_Comm, coll);
     comm->rank = rank;
     comm->size = size;
     comm->tag = *tag;

@@ -25,6 +25,7 @@ typedef MPI_Op MPIC_BMPICH_op_t;
 
 typedef struct MPIC_BMPICH_comm_t {
     struct MPIR_Comm *mpid_comm;
+    MPIC_sched_entry_t *sched_cache;
 } MPIC_BMPICH_comm_t;
 
 typedef struct MPIC_BMPICH_aint_t {
@@ -121,6 +122,7 @@ typedef struct MPIC_BMPICH_req_t {
 
 
 typedef struct MPIC_BMPICH_sched_t {
+    int started;
     uint64_t total;
     MPIC_BMPICH_req_t requests[MPIC_BMPICH_MAX_REQUESTS];
     /*Store the memory location of all the buffers that were temporarily

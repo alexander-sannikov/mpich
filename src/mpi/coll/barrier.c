@@ -307,16 +307,16 @@ int MPIR_Barrier(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
             break;
         case 1:
             mpi_errno = MPIC_MPICH_DISSEM_barrier( &(MPIC_COMM(comm_ptr)->mpich_dissem),
-                            errflag);
+                            (int*)errflag);
             break;
         case 2:
-            mpi_errno = MPIC_MPICH_KARY_barrier(&(MPIC_COMM(comm_ptr)->mpich_kary), errflag, 2);
+            mpi_errno = MPIC_MPICH_KARY_barrier(&(MPIC_COMM(comm_ptr)->mpich_kary), (int*)errflag, 2);
             break;
         case 3:
-            mpi_errno = MPIC_MPICH_KNOMIAL_barrier(&(MPIC_COMM(comm_ptr)->mpich_knomial), errflag, 2);
+            mpi_errno = MPIC_MPICH_KNOMIAL_barrier(&(MPIC_COMM(comm_ptr)->mpich_knomial), (int*)errflag, 2);
             break;
         case 4:
-            mpi_errno = MPIC_MPICH_RECEXCH_barrier(&(MPIC_COMM(comm_ptr)->mpich_recexch), errflag, 2);
+            mpi_errno = MPIC_MPICH_RECEXCH_barrier(&(MPIC_COMM(comm_ptr)->mpich_recexch), (int*)errflag, 2);
             break;
         }
 #endif

@@ -15,12 +15,6 @@
 #define TSP_comm_init        MPIC_BMPICH_comm_init
 #define TSP_dt_init          MPIC_BMPICH_dt_init
 #define TSP_op_init          MPIC_BMPICH_op_init
-#define TSP_sched_init       MPIC_BMPICH_sched_init
-#define TSP_sched_reset      MPIC_BMPICH_sched_reset
-#define TSP_sched_commit     MPIC_BMPICH_sched_commit
-#define TSP_sched_start      MPIC_BMPICH_sched_start
-#define TSP_sched_finalize   MPIC_BMPICH_sched_finalize
-#define TSP_init_control_dt  MPIC_BMPICH_init_control_dt
 #define TSP_fence            MPIC_BMPICH_fence
 #define TSP_wait             MPIC_BMPICH_wait
 #define TSP_opinfo           MPIC_BMPICH_opinfo
@@ -48,3 +42,14 @@
 
 #define TSP_FLAG_REDUCE_L    MPIC_FLAG_REDUCE_L
 #define TSP_FLAG_REDUCE_R    MPIC_FLAG_REDUCE_R
+
+/* Schedule API*/
+/* Create/load schedule, reset it in case of load */
+#define TSP_sched_get           MPIC_BMPICH_sched_get
+/* Push schedule into cache, in case of implemented cache */
+#define TSP_sched_cache_store   MPIC_BMPICH_sched_cache_store
+/*Mark schedule as ready for execution. */
+#define TSP_sched_start         MPIC_BMPICH_sched_start
+/* Release schedule (destroy in case of disabled caching) */
+#define TSP_sched_finalize      MPIC_BMPICH_sched_finalize
+#define TSP_sched_commit        MPIC_BMPICH_sched_commit

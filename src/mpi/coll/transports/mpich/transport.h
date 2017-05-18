@@ -98,15 +98,10 @@ static inline int MPIC_MPICH_init()
     return 0;
 }
 
-static inline int MPIC_MPICH_comm_init(MPIC_MPICH_comm_t * comm, void *base)
+static inline void MPIC_MPICH_sched_cache_store( MPIC_MPICH_comm_t *comm,
+                                    void* key, int len, void* s)
 {
-    MPIR_Comm *mpi_comm = container_of(base, MPIR_Comm, ch4_coll);
-    comm->mpid_comm = mpi_comm;
-}
-
-static inline int MPIC_MPICH_comm_cleanup(MPIC_MPICH_comm_t * comm)
-{
-    comm->mpid_comm = NULL;
+    MPIC_add_sched( &(comm->sched_cache), key, len, s);
 }
 
 static inline void MPIC_MPICH_reset_issued_list(MPIC_MPICH_sched_t * sched)
@@ -133,6 +128,7 @@ static inline void MPIC_MPICH_sched_init(MPIC_MPICH_sched_t * sched, int tag)
     sched->total = 0;
     sched->num_completed = 0;
     sched->last_wait = -1;
+    sched->sched_started = 0;
     sched->tag = tag;
     sched->max_vtcs = MPIC_MPICH_MAX_REQUESTS;
     sched->max_edges_per_vtx = MPIC_MPICH_MAX_EDGES;
@@ -153,6 +149,8 @@ static inline void MPIC_MPICH_sched_reset(MPIC_MPICH_sched_t * sched, int tag)
     int i;
     sched->num_completed = 0;
     sched->tag = tag;
+    sched->sched_started = 0;
+
     for (i = 0; i < sched->total; i++) {
         MPIC_MPICH_vtx_t *vtx = &sched->vtcs[i];
         vtx->state = MPIC_MPICH_STATE_INIT;
@@ -161,6 +159,25 @@ static inline void MPIC_MPICH_sched_reset(MPIC_MPICH_sched_t * sched, int tag)
             vtx->nbargs.recv_reduce.done = 0;
     }
     MPIC_MPICH_reset_issued_list(sched);
+}
+
+
+
+static inline MPIC_MPICH_sched_t* MPIC_MPICH_sched_get(MPIC_MPICH_comm_t *comm,
+            void* key, int len, int tag, int *is_new)
+{
+    MPIC_MPICH_sched_t* s = MPIC_get_sched(comm->sched_cache, key, len);
+    if (s) {
+        MPIC_DBG("schedule is loaded from cache[%lX]\n",s);
+        *is_new = 0;
+        MPIC_MPICH_sched_reset(s,tag);
+    } else {
+        *is_new = 1;
+        s = MPL_malloc(sizeof(MPIC_MPICH_sched_t));
+        MPIC_DBG("Schedule is created:[%lX]\n",s);
+        MPIC_MPICH_sched_init(s,tag);
+    }
+    return s;
 }
 
 static inline void MPIC_MPICH_sched_commit(MPIC_MPICH_sched_t * sched)
@@ -693,7 +710,6 @@ static inline void *MPIC_MPICH_allocate_buffer(size_t size, MPIC_MPICH_sched_t *
     return buf;
 }
 
-
 static inline int MPIC_MPICH_free_mem_nb(void *ptr,
                                          MPIC_MPICH_sched_t * sched, int n_invtcs, int *invtcs)
 {
@@ -850,10 +866,6 @@ static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t * sched)
     if (sched->total == sched->num_completed) {
         return 1;
     }
-    /*fprintf(stderr, "issued list: ");
-     * TSP_req_t *tmp = sched->issued_head;
-     * while (tmp){fprintf(stderr, "%d ", req->kind); tmp = tmp->next_issued;}
-     * fprintf(stderr,"\n"); */
 
     assert(sched->issued_head != NULL);
     sched->vtx_iter = sched->issued_head;
@@ -958,6 +970,28 @@ static inline void MPIC_MPICH_free_buffers(MPIC_MPICH_sched_t * sched)
     MPIC_MPICH_free_mem(sched->vtcs);
 }
 
+
+static inline void MPIC_MPICH_sched_destroy_fn(MPIC_MPICH_sched_t * s)
+{
+    MPIC_MPICH_free_buffers(s);
+    MPL_free(s);
+}
+
+
+static inline int MPIC_MPICH_comm_init(MPIC_MPICH_comm_t * comm, void *base)
+{
+    MPIR_Comm *mpi_comm = container_of(base, MPIR_Comm, coll);
+    comm->mpid_comm = mpi_comm;
+    comm->sched_cache = NULL;
+    return 0;
+}
+
+static inline int MPIC_MPICH_comm_cleanup(MPIC_MPICH_comm_t * comm)
+{
+    MPIC_delete_sched_table(comm->sched_cache,(MPIC_sched_free_fn)MPIC_MPICH_sched_destroy_fn);
+    comm->mpid_comm = NULL;
+    return 0;
+}
 
 
 #endif

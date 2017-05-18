@@ -38,54 +38,50 @@ static inline int COLL_comm_cleanup(COLL_comm_t * comm)
     return 0;
 }
 
-/*This function is used by non-blocking collectives to
- * make progress on the collective operation*/
-static inline int COLL_kick(COLL_queue_elem_t * elem)
-{
-    int done;
-    COLL_sched_t *s = ((COLL_req_t *) elem)->phases;
-    done = COLL_sched_kick_nb(s);       /*make progress on the schedule */
-
-    /*if done remove the schedule from the queue */
-    if (done) {
-        TAILQ_REMOVE(&COLL_progress_global.head, elem, list_data);
-        TSP_sched_finalize(&s->tsp_sched);
-        COLL_sched_free(s);
-    }
-
-    return done;
-}
 
 static inline int COLL_barrier(COLL_comm_t * comm, int *errflag)
 {
-    int rc;
-    COLL_sched_t s;
+    int rc = 0;
+    COLL_args_t coll_args = {.algo = COLL_NAME,.nargs = 1,
+        .args = {.barrier = {.k = 0}}
+    };
+
+    int is_new = 0;
     int tag = (*comm->curTag)++;
-    COLL_sched_init(&s, tag);
-    rc = COLL_sched_barrier_dissem(tag, comm, &s);
-    COLL_sched_kick(&s);
+
+    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+                    (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
+
+    if (is_new) {
+        rc = COLL_sched_barrier_dissem(tag, comm, s);
+        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+                        sizeof(COLL_args_t), (void *) s);
+    }
+
+    COLL_sched_kick(s);
     return rc;
 }
 
 static inline int COLL_ibarrier(COLL_comm_t * comm, COLL_req_t * request)
 {
-    COLL_sched_t *s;
-    int rc;
-    int done = 0;
+    int rc = 0;
+    COLL_args_t coll_args = {.algo = COLL_NAME,.nargs = 1,
+        .args = {.barrier = {.k = 0}}
+    };
+
+    int is_new = 0;
     int tag = (*comm->curTag)++;
-    /*initialize schedule */
-    COLL_sched_init_nb(&s, tag, request);
-    /*generate schedule */
-    rc = COLL_sched_barrier_dissem(tag, comm, s);
-    /*kick start the schedule and return */
-    done = COLL_sched_kick_nb(s);
 
-    if (1 || !done) {   /* always enqueue until we can fix the request interface */
-        TAILQ_INSERT_TAIL(&COLL_progress_global.head, &request->elem, list_data);
+    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+                    (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
+
+    if (is_new) {
+        rc = COLL_sched_barrier_dissem(tag, comm, s);
+        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+                        sizeof(COLL_args_t), (void *) s);
     }
-    else
-        TSP_free_mem(s);
 
+    COLL_sched_kick_nb(s, request);
     return rc;
 }
 
@@ -96,18 +92,31 @@ static inline int COLL_alltoall(const void *sendbuf,
                                 int recvcount,
                                 COLL_dt_t recvtype, COLL_comm_t * comm, int *errflag, int k)
 {
-    int rc;
-    COLL_sched_t s;
+    int rc = 0;
+    COLL_args_t coll_args = {.algo = COLL_NAME,.nargs = 6,
+        .args = {.alltoall = {.sbuf = (void*)sendbuf,
+                              .scount = sendcount,
+                              .stype = (int)sendtype,
+                              .rbuf = (void*)recvbuf,
+                              .rcount = recvcount,
+                              .rtype = (int)recvtype }}
+    };
+
+    int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    COLL_sched_init(&s, tag);
-    rc = COLL_sched_alltoall_brucks(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype,
-                                    comm, tag, &s, k);
+    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+                    (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
-    TSP_fence(&s.tsp_sched);
-    TSP_sched_commit(&s.tsp_sched);
+    if (is_new) {
+        rc = COLL_sched_alltoall_brucks(sendbuf, sendcount, sendtype,
+                                    recvbuf, recvcount, recvtype,
+                                    comm, tag, s, k);
+        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+                        sizeof(COLL_args_t), (void *) s);
+    }
 
-    COLL_sched_kick(&s);
+    COLL_sched_kick(s);
     return rc;
 }
 
@@ -118,25 +127,31 @@ static inline int COLL_ialltoall(const void *sendbuf,
                                  int recvcount,
                                  COLL_dt_t recvtype, COLL_comm_t * comm, COLL_req_t * request)
 {
-    int rc, is_inplace, is_commutative, is_contig;
-    size_t type_size, extent, lb;
-    COLL_sched_t *s;
+    int rc = 0;
+    COLL_args_t coll_args = {.algo = COLL_NAME,.nargs = 6,
+        .args = {.alltoall = {.sbuf = (void*)sendbuf,
+                              .scount = sendcount,
+                              .stype = (int)sendtype,
+                              .rbuf = (void*)recvbuf,
+                              .rcount = recvcount,
+                              .rtype = (int)recvtype }}
+    };
+
+    int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    COLL_sched_init_nb(&s, tag, request);
+    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+                    (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
-    rc = COLL_sched_alltoall(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, comm, tag,
-                             s);
+    if (is_new) {
 
-    TSP_fence(&s->tsp_sched);
-    TSP_sched_commit(&s->tsp_sched);
-
-    int done = COLL_sched_kick_nb(s);
-    if (1 || !done) {   /* always enqueue until we can fix the request interface */
-        TAILQ_INSERT_TAIL(&COLL_progress_global.head, &request->elem, list_data);
+        rc = COLL_sched_alltoall(sendbuf, sendcount, sendtype,
+                                recvbuf, recvcount, recvtype, comm, tag, s);
+        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+                                sizeof(COLL_args_t), (void *) s);
     }
-    else
-        TSP_free_mem(s);
+
+    COLL_sched_kick_nb(s,request);
     return rc;
 }
 
@@ -147,12 +162,20 @@ static inline int COLL_allreduce(const void *sendbuf,
 {
     int rc, is_inplace, is_commutative, is_contig;
     size_t type_size, extent, lb;
-    COLL_sched_t *s = TSP_allocate_mem(sizeof(COLL_sched_t));
-    TSP_sched_t *tsp_sched = &s->tsp_sched;
-    void *tmp_buf;
-    void *sbuf = (void *) sendbuf;
     void *rbuf = recvbuf;
+    void *sbuf = sendbuf;
+    void *tmp_buf;
+    int is_new = 0;
     int tag = (*comm->curTag)++;
+
+    COLL_args_t coll_args = {.algo = COLL_NAME,.nargs = 5,
+        .args = {.allreduce =
+                 {.sbuf = (void*)sendbuf,
+                  .rbuf = recvbuf,
+                  .count = count,
+                  .dt_id = (int) datatype,
+                  .op_id = (int)op}}
+    };
 
     is_inplace = TSP_isinplace((void *) sendbuf);       /*is it in place collective operation */
     TSP_opinfo(op, &is_commutative);    /*check whether reduction operation is commutative */
@@ -161,26 +184,32 @@ static inline int COLL_allreduce(const void *sendbuf,
     if (!is_commutative)
         return -1;      /*this implementatation currently does not handle non-commutative operations */
 
-    COLL_sched_init(s, tag);
 
-    if (is_inplace) {   /*allocate temporary buffer for receiving data */
-        tmp_buf = TSP_allocate_buffer(extent * count, tsp_sched);
-        sbuf = recvbuf;
-        rbuf = tmp_buf;
+    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+                    (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
+
+    if (is_new) {
+        if (is_inplace) {   /*allocate temporary buffer for receiving data */
+            tmp_buf = TSP_allocate_buffer(extent * count, s);
+            sbuf = recvbuf;
+            rbuf = tmp_buf;
+        }
+
+        rc = COLL_sched_allreduce_dissem(sbuf, rbuf, count, datatype,
+                                         op, tag, comm, s);
+
+        int fenceid = TSP_fence(s);
+        if (is_inplace) {   /*copy the data back to receive buffer */
+            int dtcopy_id = TSP_dtcopy_nb(recvbuf, count, datatype,
+                                          tmp_buf, count, datatype,
+                                          s, 1, &fenceid);
+        }
+
+        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+                        sizeof(COLL_args_t), (void *) s);
     }
 
-    rc = COLL_sched_allreduce_dissem(sbuf, rbuf, count, datatype, op, tag, comm, s);
-
-    int fenceid = TSP_fence(tsp_sched);
-    if (is_inplace) {   /*copy the data back to receive buffer */
-        int dtcopy_id = TSP_dtcopy_nb(recvbuf, count, datatype,
-                                      tmp_buf, count, datatype,
-                                      tsp_sched, 1, &fenceid);
-    }
-
-    TSP_sched_commit(tsp_sched);
     COLL_sched_kick(s);
-    COLL_sched_free(s);
     return rc;
 }
 
@@ -190,51 +219,57 @@ static inline int COLL_iallreduce(const void *sendbuf,
                                   COLL_dt_t datatype,
                                   COLL_op_t op, COLL_comm_t * comm, COLL_req_t * request)
 {
-    /*This is same as COLL_allreduce above, except that it initializes
-     * a non-blocking schedule and calls non-blocking kick function*/
-    COLL_sched_t *s;
-    int is_inplace, is_commutative, is_contig, rc, done = 0;
+    int rc, is_inplace, is_commutative, is_contig;
     size_t type_size, extent, lb;
-    int tag = (*comm->curTag)++;
-    void *tmp_buf;
-    void *sbuf = (void *) sendbuf;
     void *rbuf = recvbuf;
+    void *sbuf = sendbuf;
+    void *tmp_buf;
 
-    is_inplace = TSP_isinplace((void *) sendbuf);
-    TSP_opinfo(op, &is_commutative);
-    TSP_dtinfo(datatype, &is_contig, &type_size, &extent, &lb);
+    COLL_args_t coll_args = {.algo = COLL_NAME,.nargs = 5,
+        .args = {.allreduce =
+                 {.sbuf = (void*)sendbuf,
+                  .rbuf = recvbuf,
+                  .count = count,
+                  .dt_id = (int) datatype,
+                  .op_id = (int)op}}
+    };
+
+    is_inplace = TSP_isinplace((void *) sendbuf);       /*is it in place collective operation */
+    TSP_opinfo(op, &is_commutative);    /*check whether reduction operation is commutative */
+    TSP_dtinfo(datatype, &is_contig, &type_size, &extent, &lb); /*collect specifics of the data type */
+
+    int is_new = 0;
+    int tag = (*comm->curTag)++;
+
 
     if (!is_commutative)
-        return -1;
+        return -1;      /*this implementatation currently does not handle non-commutative operations */
 
-    COLL_sched_init_nb(&s, tag, request);
-    TSP_sched_t *tsp_sched = &s->tsp_sched;
 
-    if (is_inplace) {
-        tmp_buf = TSP_allocate_buffer(extent * count, tsp_sched);
-        sbuf = recvbuf;
-        rbuf = tmp_buf;
+    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+                    (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
+
+    if (is_new) {
+        if (is_inplace) {   /*allocate temporary buffer for receiving data */
+            tmp_buf = TSP_allocate_buffer(extent * count, s);
+            sbuf = recvbuf;
+            rbuf = tmp_buf;
+        }
+
+        rc = COLL_sched_allreduce_dissem(sbuf, rbuf, count, datatype, op,
+                                                        tag, comm, s);
+        int fenceid = TSP_fence(s);
+        if (is_inplace) {   /*copy the data back to receive buffer */
+            int dtcopy_id = TSP_dtcopy_nb(recvbuf, count, datatype,
+                                          tmp_buf, count, datatype,
+                                          s, 1, &fenceid);
+        }
+
+        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+                        sizeof(COLL_args_t), (void *) s);
     }
 
-    rc = COLL_sched_allreduce_dissem(sbuf, rbuf, count, datatype, op, tag, comm, s);
-
-    int fenceid = TSP_fence(tsp_sched);
-    if (is_inplace) {   /*copy the data back to receive buffer */
-        int dtcopy_id = TSP_dtcopy_nb(recvbuf, count, datatype,
-                                      tmp_buf, count, datatype,
-                                      tsp_sched, 1, &fenceid);
-    }
-
-    TSP_fence(tsp_sched);
-    TSP_sched_commit(tsp_sched);
-
-    done = COLL_sched_kick_nb(s);
-
-    if (1 || !done) {   /* always enqueue until we can fix the request interface */
-        TAILQ_INSERT_TAIL(&COLL_progress_global.head, &request->elem, list_data);
-    }
-    else
-        COLL_sched_free(s);
-
+    COLL_sched_kick_nb(s, request);
     return rc;
+
 }
