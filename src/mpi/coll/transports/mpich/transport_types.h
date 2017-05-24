@@ -12,10 +12,10 @@
 #define MPICH_TRANSPORT_TYPES_H_INCLUDED
 
 #undef MPIC_MPICH_MAX_EDGES
-#define MPIC_MPICH_MAX_EDGES 64
+#define MPIC_MPICH_MAX_EDGES 1
 
 #undef MPIC_MPICH_MAX_REQUESTS
-#define MPIC_MPICH_MAX_REQUESTS 64
+#define MPIC_MPICH_MAX_REQUESTS 1
 
 typedef MPI_Datatype MPIC_MPICH_dt_t;
 
@@ -53,7 +53,7 @@ typedef struct MPIC_MPICH_recv_reduce_arg_t {
     MPIC_MPICH_op_t    op;
     int                source;
     struct MPIC_MPICH_comm_t *comm;
-    struct MPIC_MPICH_req_t  *req;
+    struct MPIC_MPICH_vtx_t  *vtxp;
     int                done;
     uint64_t           flags;
 }
@@ -110,21 +110,27 @@ enum {
 };
 
 typedef struct{
-    int array[MPIC_MPICH_MAX_EDGES];
+    int *array;
     int used;
     int size;
-} MPIC_MPICH_IntArray;
+} MPIC_MPICH_int_array;
+
+typedef struct{
+    void **array;
+    int used;
+    int size;
+} MPIC_MPICH_ptr_array;
 
 
-typedef struct MPIC_MPICH_req_t {
-    struct MPIC_MPICH_req_t* next_issued;
+typedef struct MPIC_MPICH_vtx_t {
+    struct MPIC_MPICH_vtx_t* next_issued;
     struct MPIR_Request *mpid_req[2];
     int        kind;
     int        state;
     int        id; /*a unique id for this task*/
 
-    MPIC_MPICH_IntArray invtcs;
-    MPIC_MPICH_IntArray outvtcs;
+    MPIC_MPICH_int_array invtcs;
+    MPIC_MPICH_int_array outvtcs;
 
     int       num_unfinished_dependencies;
     union {
@@ -137,27 +143,29 @@ typedef struct MPIC_MPICH_req_t {
         MPIC_MPICH_reduce_local_arg_t reduce_local;
     } nbargs;
 }
-MPIC_MPICH_req_t;
+MPIC_MPICH_vtx_t;
 
 
 typedef struct MPIC_MPICH_sched_t {
     int        tag;
-    uint64_t   total;
     uint64_t   num_completed;
     uint64_t   last_wait; /*used by TSP_wait, to keep track of the last TSP_wait vtx id*/
-    MPIC_MPICH_req_t  requests[MPIC_MPICH_MAX_REQUESTS];
+    //MPIC_MPICH_req_t  requests[MPIC_MPICH_MAX_REQUESTS];
+    MPIC_MPICH_vtx_t  *vtcs;
+    int max_vtcs;
+    int max_edges_per_vtx;
+    uint64_t   total;
     /*Store the memory location of all the buffers that were temporarily
     * allocated to execute the schedule. This information is later used
     * to free those memory locations when the schedule is destroyed (MPIC_MPICH_free_sched_mem)
     * Note that the temporary memory allocated by recv_reduce is not 
     * recorded here since the transport already knows about it
     */
-    uint64_t   nbufs;
-    void      *buf[MPIC_MPICH_MAX_REQUESTS];/*size of the array is currently arbitrarily set*/
+    MPIC_MPICH_ptr_array buf_array;
 
-    MPIC_MPICH_req_t  *issued_head;/*head of the issued requests list*/
-    MPIC_MPICH_req_t  *req_iter;/*current request under consideration*/
-    MPIC_MPICH_req_t  *last_issued; /*points to the last task considered issued in the current pass*/
+    MPIC_MPICH_vtx_t  *issued_head;/*head of the issued requests list*/
+    MPIC_MPICH_vtx_t  *vtx_iter;/*current request under consideration*/
+    MPIC_MPICH_vtx_t  *last_issued; /*points to the last task considered issued in the current pass*/
 }
 MPIC_MPICH_sched_t;
 
