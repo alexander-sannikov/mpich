@@ -28,10 +28,7 @@ typedef struct COLL_comm_t {
     TSP_comm_t tsp_comm;
 } COLL_comm_t;
 
-typedef struct COLL_req_t {
-    COLL_queue_elem_t elem;
-    TSP_sched_t *phases;
-} COLL_req_t;
+typedef MPIC_req_t COLL_req_t;
 
 typedef struct {
     int algo;                   /*algorithm type */

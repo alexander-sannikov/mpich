@@ -624,13 +624,13 @@ static inline int MPIC_BMPICH_comm_cleanup(MPIC_BMPICH_comm_t * comm)
     comm->mpid_comm = NULL;
 }
 
-static inline void MPIC_BMPICH_sched_cache_store( MPIC_BMPICH_comm_t *comm,
+static inline void MPIC_BMPICH_save_schedule( MPIC_BMPICH_comm_t *comm,
                                     void* key, int len, void* s)
 {
     MPIC_add_sched( &(comm->sched_cache), key, len, s);
 }
 
-static inline MPIC_BMPICH_sched_t* MPIC_BMPICH_sched_get(
+static inline MPIC_BMPICH_sched_t* MPIC_BMPICH_get_schedule(
                     MPIC_BMPICH_comm_t *comm,
             void* key, int len, int tag, int *is_new)
 {

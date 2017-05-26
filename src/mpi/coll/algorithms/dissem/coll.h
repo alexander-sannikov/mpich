@@ -49,12 +49,12 @@ static inline int COLL_barrier(COLL_comm_t * comm, int *errflag)
     int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm,
                     (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
     if (is_new) {
         rc = COLL_sched_barrier_dissem(tag, comm, s);
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
 
@@ -72,12 +72,12 @@ static inline int COLL_ibarrier(COLL_comm_t * comm, COLL_req_t * request)
     int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm,
                     (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
     if (is_new) {
         rc = COLL_sched_barrier_dissem(tag, comm, s);
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
 
@@ -105,14 +105,14 @@ static inline int COLL_alltoall(const void *sendbuf,
     int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm,
                     (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
     if (is_new) {
         rc = COLL_sched_alltoall_brucks(sendbuf, sendcount, sendtype,
                                     recvbuf, recvcount, recvtype,
                                     comm, tag, s, k);
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
 
@@ -140,14 +140,14 @@ static inline int COLL_ialltoall(const void *sendbuf,
     int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm,
                     (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
     if (is_new) {
 
         rc = COLL_sched_alltoall(sendbuf, sendcount, sendtype,
                                 recvbuf, recvcount, recvtype, comm, tag, s);
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                                 sizeof(COLL_args_t), (void *) s);
     }
 
@@ -185,7 +185,7 @@ static inline int COLL_allreduce(const void *sendbuf,
         return -1;      /*this implementatation currently does not handle non-commutative operations */
 
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm,
                     (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
     if (is_new) {
@@ -205,7 +205,7 @@ static inline int COLL_allreduce(const void *sendbuf,
                                           s, 1, &fenceid);
         }
 
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
 
@@ -246,7 +246,7 @@ static inline int COLL_iallreduce(const void *sendbuf,
         return -1;      /*this implementatation currently does not handle non-commutative operations */
 
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm,
                     (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
     if (is_new) {
@@ -265,7 +265,7 @@ static inline int COLL_iallreduce(const void *sendbuf,
                                           s, 1, &fenceid);
         }
 
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
 

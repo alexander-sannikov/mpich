@@ -84,13 +84,13 @@ static inline int COLL_allreduce(const void *sendbuf,
     int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm, (void*) &coll_args,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm, (void*) &coll_args,
             sizeof(COLL_args_t), tag, &is_new);
     if (is_new) {
         rc = COLL_sched_allreduce_recexch(sendbuf, recvbuf, count,
                                           datatype, op, tag, comm,
                                           k, s, per_nbr_buffer, 1);
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
     COLL_sched_kick(s);
@@ -120,14 +120,14 @@ static inline int COLL_iallreduce(const void *sendbuf,
     int is_new = 0;
     int tag = (*comm->curTag)++;
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm, (void*) &coll_args,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm, (void*) &coll_args,
             sizeof(COLL_args_t), tag, &is_new);
     if (is_new) {
         /*FIXME: Refounts should be inside*/
         rc = COLL_sched_allreduce_recexch(sendbuf, recvbuf, count,
                                           datatype, op, tag, comm,
                                           k, s, per_nbr_buffer, 1);
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
     COLL_sched_kick_nb(s, request);
@@ -167,7 +167,7 @@ static inline int COLL_barrier(COLL_comm_t * comm, int *errflag, int k)
     int tag = (*comm->curTag)++;
     void *recvbuf=NULL;
 
-    TSP_sched_t *s = TSP_sched_get( &comm->tsp_comm,
+    TSP_sched_t *s = TSP_get_schedule( &comm->tsp_comm,
                     (void*) &coll_args, sizeof(COLL_args_t), tag, &is_new);
 
     if (is_new) {
@@ -175,7 +175,7 @@ static inline int COLL_barrier(COLL_comm_t * comm, int *errflag, int k)
                                       MPI_BYTE, MPI_SUM, tag,
                                       comm, k, &s, 0, 1);
 
-        TSP_sched_cache_store(&comm->tsp_comm, (void*)&coll_args,
+        TSP_save_schedule(&comm->tsp_comm, (void*)&coll_args,
                         sizeof(COLL_args_t), (void *) s);
     }
 

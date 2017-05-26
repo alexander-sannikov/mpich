@@ -99,7 +99,7 @@ static inline int MPIC_MPICH_init()
     return 0;
 }
 
-static inline void MPIC_MPICH_sched_cache_store( MPIC_MPICH_comm_t *comm,
+static inline void MPIC_MPICH_save_schedule( MPIC_MPICH_comm_t *comm,
                                     void* key, int len, void* s)
 {
     MPIC_add_sched( &(comm->sched_cache), key, len, s);
@@ -164,7 +164,7 @@ static inline void MPIC_MPICH_sched_reset(MPIC_MPICH_sched_t * sched, int tag)
 
 
 
-static inline MPIC_MPICH_sched_t* MPIC_MPICH_sched_get(MPIC_MPICH_comm_t *comm,
+static inline MPIC_MPICH_sched_t* MPIC_MPICH_get_schedule(MPIC_MPICH_comm_t *comm,
             void* key, int len, int tag, int *is_new)
 {
     MPIC_MPICH_sched_t* s = MPIC_get_sched(comm->sched_cache, key, len);

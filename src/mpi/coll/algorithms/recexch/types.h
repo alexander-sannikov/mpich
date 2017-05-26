@@ -18,10 +18,7 @@ typedef struct COLL_comm_t {
     int id;                     /*unique id for this communicator */
 } COLL_comm_t;
 
-typedef struct COLL_req_t {
-    COLL_queue_elem_t elem;
-    TSP_sched_t *phases;
-} COLL_req_t;
+typedef MPIC_req_t COLL_req_t;
 
 typedef TSP_aint_t COLL_aint_t;
 

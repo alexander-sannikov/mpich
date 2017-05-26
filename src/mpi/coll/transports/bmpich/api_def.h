@@ -45,9 +45,9 @@
 
 /* Schedule API*/
 /* Create/load schedule, reset it in case of load */
-#define TSP_sched_get           MPIC_BMPICH_sched_get
+#define TSP_get_schedule        MPIC_BMPICH_get_schedule
 /* Push schedule into cache, in case of implemented cache */
-#define TSP_sched_cache_store   MPIC_BMPICH_sched_cache_store
+#define TSP_save_schedule       MPIC_BMPICH_save_schedule
 /*Mark schedule as ready for execution. */
 #define TSP_sched_start         MPIC_BMPICH_sched_start
 /* Release schedule (destroy in case of disabled caching) */
