@@ -128,6 +128,21 @@ static inline int COLL_iallreduce(const void  *sendbuf,
     return 0;
 }
 
+static inline int COLL_barrier(COLL_comm_t *comm,
+                               int         *errflag,
+                               int          k)
+{
+    int                rc;
+    COLL_sched_t s;
+    int                tag = (*comm->curTag)++;
+    COLL_sched_init(&s, tag);
+    void *recvbuf;
+    rc = COLL_sched_allreduce_recexch(MPI_IN_PLACE,recvbuf,0,
+                                          MPI_BYTE,MPI_SUM,tag,comm,k,&s,0,1);
+    COLL_sched_kick(&s);
+    return rc;
+}
+
 /*Unnecessary unless we non-blocking colls here*/
 static inline int COLL_kick(COLL_queue_elem_t * elem)
 {

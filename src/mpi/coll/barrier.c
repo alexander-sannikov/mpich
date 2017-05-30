@@ -315,6 +315,9 @@ int MPIR_Barrier(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
         case 3:
             mpi_errno = MPIC_MPICH_KNOMIAL_barrier(&(MPIC_COMM(comm_ptr)->mpich_knomial), errflag, 2);
             break;
+        case 4:
+            mpi_errno = MPIC_MPICH_RECEXCH_barrier(&(MPIC_COMM(comm_ptr)->mpich_recexch), errflag, 2);
+            break;
         }
 #endif
         if (mpi_errno) MPIR_ERR_POP(mpi_errno);
