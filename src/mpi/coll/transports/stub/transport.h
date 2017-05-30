@@ -76,6 +76,10 @@ static inline int MPIC_STUB_wait(MPIC_STUB_sched_t * sched)
 {
 }
 
+static inline int MPIC_STUB_wait_for(MPIC_STUB_sched_t * sched, int nvtcs, int *vtcs)
+{
+}
+
 static inline void MPIC_STUB_addref_dt(MPIC_STUB_dt_t dt, int up)
 {
 

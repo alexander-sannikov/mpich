@@ -21,6 +21,7 @@
 #define TSP_init_control_dt  MPIC_MPICH_init_control_dt
 #define TSP_fence            MPIC_MPICH_fence
 #define TSP_wait             MPIC_MPICH_wait
+#define TSP_wait_for         MPIC_MPICH_wait_for
 #define TSP_opinfo           MPIC_MPICH_opinfo
 #define TSP_isinplace        MPIC_MPICH_isinplace
 #define TSP_dtinfo           MPIC_MPICH_dtinfo

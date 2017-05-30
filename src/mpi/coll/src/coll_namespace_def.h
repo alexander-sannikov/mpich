@@ -51,7 +51,7 @@
 
 #define COLL_FIELD_NAME         COLL_NSCAT1(COLL_NSCAT1(TRANSPORT_NAME_LC,_),COLL_NAME_LC)
 #define COLL_COMM_BASE(addr)    container_of(addr,MPIC_comm_t, COLL_FIELD_NAME)
-#define COLL_global             TSP_NSCAT1(MPIC_global_instance.,COLL_FIELD_NAME)
+#define COLL_global             MPIC_global_instance.COLL_FIELD_NAME
 
 /* Schedule APIs */
 #define COLL_sched_execute      COLL_NAMESPACE(sched_execute)

@@ -96,15 +96,15 @@ static inline int COLL_alltoall(const void  *sendbuf,
                                 int recvcount,
                                 COLL_dt_t recvtype,
                                 COLL_comm_t *comm,
-                                int *errflag)
+                                int *errflag,
+                                int k)
 {
     int                 rc;
     COLL_sched_t  s;
     int                 tag     = (*comm->curTag)++;
 
     COLL_sched_init(&s,tag);
-
-    rc = COLL_sched_alltoall_brucks(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm,tag,&s);
+    rc = COLL_sched_alltoall_brucks(sendbuf,sendcount,sendtype,recvbuf,recvcount,recvtype,comm,tag,&s,k);
 
     TSP_fence(&s.tsp_sched);
     TSP_sched_commit(&s.tsp_sched);

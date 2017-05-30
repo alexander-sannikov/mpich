@@ -10,6 +10,15 @@
  */
 #ifndef MPICHTRANSPORT_H_INCLUDED
 #define MPICHTRANSPORT_H_INCLUDED
+#define max(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+       _a > _b ? _a : _b;     })
+
+#define min(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+       _a < _b ? _a : _b;     })
 
 static inline void *MPIC_MPICH_allocate_mem(size_t size)
 {
@@ -238,20 +247,23 @@ static inline void MPIC_MPICH_free_vtx(MPIC_MPICH_vtx_t *vtx){
 }
 
 static inline void MPIC_MPICH_add_elems_int_array(MPIC_MPICH_int_array* in, int n_elems, int *elems){
-    if(in->size+n_elems > in->size){
-        int old_size = in->size;
+    if(0)fprintf(stderr,"here in add_elems_int_array, in->used: %d, in->size: %d\n", in->used, in->size);
+    if(in->used+n_elems > in->size){
+        if(0)fprintf(stderr,"increasing int_array size\n");
         int* old_array = in->array;
-        in->size *= 2;
+        in->size = max(2*in->size, in->used+n_elems);
         /*reallocate array*/
-        in->array = MPIC_MPICH_allocate_mem(sizeof(int)*in->size);
+        in->array = (int*)MPIC_MPICH_allocate_mem(sizeof(int)*in->size);
         /*copy old elements*/
         memcpy(in->array, old_array, sizeof(int)*in->used);
         /*free old array*/
         MPIC_MPICH_free_mem(old_array);
     }
+    if(0)fprintf(stderr,"adding %d elems to int_array\n", n_elems);
     /*add new elements*/
     memcpy(in->array+in->used, elems, sizeof(int)*n_elems);
     in->used += n_elems;
+    if(0)fprintf(stderr,"done adding %d elems to int_array\n", n_elems);
 }
 
 /*this vertex sets the incoming edges (inedges) to vtx
@@ -323,7 +335,7 @@ static inline int MPIC_MPICH_fence(MPIC_MPICH_sched_t *sched)
     int *invtcs = (int*)MPL_malloc(sizeof(int)*vtx_id);
     int i, n_invtcs=0;
     for(i=vtx_id-1; i>=0; i--){
-        if(sched->vtcs[i].kind == MPIC_MPICH_KIND_NOOP)
+        if(sched->vtcs[i].kind == MPIC_MPICH_KIND_NOOP) /*this is a wait function or previous fence function, check this breaking at a fence is ***semantically incorrect***/
             break;
         else{
             invtcs[vtx_id-1-i]=i;
@@ -346,6 +358,19 @@ This is different from the fence operation in the sense that fence requires
 any vertex to post dependencies on it while MPIC_MPICH_wait is used internally
 by the transport to add it as a dependency to any operations poster after it
 */
+
+static inline int MPIC_MPICH_wait_for(MPIC_MPICH_sched_t* sched, int nvtcs, int *vtcs){
+    if(0) fprintf(stderr, "TSP(mpich) : sched [wait_for] total=%ld \n", sched->total);
+    MPIC_MPICH_vtx_t *vtxp;
+    int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
+    vtxp->kind = MPIC_MPICH_KIND_NOOP;
+    MPIC_MPICH_init_vtx(sched,vtxp,vtx_id);
+
+    MPIC_MPICH_add_vtx_dependencies(sched, vtx_id, nvtcs, vtcs);
+    return vtx_id;
+    
+}
+
 
 static inline int MPIC_MPICH_wait(MPIC_MPICH_sched_t *sched)
 {

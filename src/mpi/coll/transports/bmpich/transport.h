@@ -140,6 +140,11 @@ static inline int MPIC_BMPICH_wait(MPIC_BMPICH_sched_t *sched)
     return 0;
 }
 
+static inline int MPIC_BMPICH_wait_for(MPIC_BMPICH_sched_t *sched, int nvtcs, int *vtcs)
+{
+    return 0;
+}
+
 static inline void MPIC_BMPICH_addref_op(MPIC_BMPICH_op_t op,
                                  int       up)
 {

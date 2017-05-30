@@ -68,6 +68,16 @@ cvars:
        0 - MPIR_alltoall
        1 - DISSEM_alltoall
 
+   - name        : MPIR_CVAR_ALLTOALL_BRUCKS_KVAL
+     category    : COLLECTIVE
+     type        : int
+     default     : 2
+     class       : device
+     verbosity   : MPI_T_VERBOSITY_USER_BASIC
+     scope       : MPI_T_SCOPE_ALL_EQ
+     description : >-
+        Radix k for Brucks AlltoAll algorithm
+
 === END_MPI_T_CVAR_INFO_BLOCK ===
 */
 
@@ -179,6 +189,24 @@ int MPIR_Alltoall_intra(
     MPID_Datatype_get_size_macro(sendtype, sendtype_size);
     nbytes = sendtype_size * sendcount;
 
+#ifdef HAVE_EXT_COLL
+    int valid_coll[] = {1};
+    int use_coll = (MPIR_CVAR_USE_ALLTOALL < 0) ?
+                MPIR_Coll_cycle_algorithm(comm_ptr, valid_coll, 1) : MPIR_CVAR_USE_ALLTOALL;
+
+    switch(use_coll) {
+        case 0:
+            break;
+        case 1:
+            mpi_errno = MPIC_MPICH_DISSEM_alltoall(sendbuf, sendcount, sendtype,
+                                    recvbuf, recvcount, recvtype, &(MPIC_COMM(comm_ptr)->mpich_dissem), 
+                                    errflag, MPIR_CVAR_ALLTOALL_BRUCKS_KVAL);
+            goto fn_exit;
+            break;
+    }
+#endif
+    
+    
     if (sendbuf == MPI_IN_PLACE) {
         /* We use pair-wise sendrecv_replace in order to conserve memory usage,
          * which is keeping with the spirit of the MPI-2.2 Standard.  But
@@ -563,23 +591,10 @@ int MPIR_Alltoall(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
     int mpi_errno = MPI_SUCCESS;
 
     if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
-#ifdef HAVE_EXT_COLL
-        int valid_coll[] = {1};
-        int use_coll = (MPIR_CVAR_USE_ALLTOALL < 0) ? MPIR_Coll_cycle_algorithm(comm_ptr,
-                                    valid_coll, 1) : MPIR_CVAR_USE_ALLTOALL;
-        if (use_coll) {
-            mpi_errno = MPIC_MPICH_DISSEM_alltoall(sendbuf, sendcount, sendtype,
-                                        recvbuf, recvcount, recvtype,
-                                        &(MPIC_COMM(comm_ptr)->mpich_dissem), errflag);
-
-        } else
-#endif
-        {
         /* intracommunicator */
-            mpi_errno = MPIR_Alltoall_intra(sendbuf, sendcount, sendtype,
+        mpi_errno = MPIR_Alltoall_intra(sendbuf, sendcount, sendtype,
                                         recvbuf, recvcount, recvtype,
                                         comm_ptr, errflag);
-        }
         if (mpi_errno) MPIR_ERR_POP(mpi_errno);
     } else {
         /* intercommunicator */
