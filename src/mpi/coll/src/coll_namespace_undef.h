@@ -54,6 +54,7 @@
 #undef COLL_sched_barrier_dissem
 #undef COLL_sched_allreduce_dissem
 #undef COLL_sched_allreduce
+#undef COLL_sched_allgather
 #undef COLL_sched_bcast
 #undef COLL_sched_bcast_tree
 #undef COLL_sched_bcast_tree_pipelined
@@ -62,11 +63,16 @@
 #undef COLL_sched_barrier
 #undef COLL_sched_barrier_tree
 #undef COLL_sched_allreduce_recexch
+#undef COLL_sched_allgather_recexch
 #undef COLL_sched_reduce_full
 #undef COLL_sched_reduce
 #undef COLL_sched_reduce_tree
 #undef COLL_sched_barrier
 #undef COLL_get_neighbors_recexch
+#undef COLL_sched_allgather_recexch_data_exchange
+#undef COLL_sched_allgather_recexch_step1
+#undef COLL_sched_allgather_recexch_step2
+#undef COLL_sched_allgather_recexch_step3
 #undef COLL_sched_alltoall_scattered
 #undef COLL_sched_alltoall_pairwise
 #undef COLL_sched_alltoall_ring

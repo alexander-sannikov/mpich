@@ -39,7 +39,7 @@ static inline int COLL_allgather(const void *sendbuf,
                                  COLL_dt_t sendtype,
                                  void *recvbuf,
                                  int recvcount,
-                                 COLL_dt_t recvtype, COLL_comm_t * comm, int *errflag)
+                                 COLL_dt_t recvtype, COLL_comm_t * comm, int k, int halving, int *errflag)
 {
     COLL_Assert(0);
     return 0;

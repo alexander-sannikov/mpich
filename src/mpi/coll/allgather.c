@@ -6,6 +6,10 @@
  */
 
 #include "mpiimpl.h"
+#include "collutil.h"
+#ifdef HAVE_EXT_COLL
+#include "coll_impl.h"
+#endif
 
 /*
 === BEGIN_MPI_T_CVAR_INFO_BLOCK ===
@@ -35,6 +39,27 @@ cvars:
         used if the send buffer size is >= this value (in bytes)
         (See also: MPIR_CVAR_ALLGATHER_SHORT_MSG_SIZE)
 
+    - name        : MPIR_CVAR_USE_ALLGATHER
+      category    : COLLECTIVE
+      type        : int
+      default     : -1
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Controls allgather algorithm:
+        0 - MPIR_allgather
+        1 - RECEXCH_allgather
+
+    - name        : MPIR_CVAR_ALLGATHER_RECEXCH_KVAL
+      category    : COLLECTIVE
+      type        : int
+      default     : 2
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        K value for allgather with recursive koupling algorithm
 === END_MPI_T_CVAR_INFO_BLOCK ===
 */
 
@@ -785,6 +810,30 @@ int MPIR_Allgather(const void *sendbuf, int sendcount, MPI_Datatype sendtype,
                    MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
 {
     int mpi_errno = MPI_SUCCESS;
+
+#ifdef HAVE_EXT_COLL
+    int valid_coll[] = {1,2};
+    int use_coll = (MPIR_CVAR_USE_ALLGATHER < 0) ? MPIR_Coll_cycle_algorithm(comm_ptr, valid_coll, 2) : MPIR_CVAR_USE_ALLGATHER;
+    int k = MPIR_CVAR_ALLGATHER_RECEXCH_KVAL;
+    switch (use_coll){
+        case 0:
+             break; 
+        case 1: /*distance doubling */
+            mpi_errno = MPIC_MPICH_RECEXCH_allgather(sendbuf,sendcount,
+                                                       sendtype,
+                                                       recvbuf,recvcount,
+                                                       recvtype,
+                                                       &(MPIC_COMM(comm_ptr)->mpich_recexch), k, 0, errflag);
+            break;
+        case 2: /*distance halving */
+            mpi_errno = MPIC_MPICH_RECEXCH_allgather(sendbuf,sendcount,
+                                                       sendtype,
+                                                       recvbuf,recvcount,
+                                                       recvtype,
+                                                       &(MPIC_COMM(comm_ptr)->mpich_recexch), k, 1, errflag);
+            break;
+    }
+#endif
 
     if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
         /* intracommunicator */

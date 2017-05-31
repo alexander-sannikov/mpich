@@ -143,6 +143,41 @@ static inline int COLL_barrier(COLL_comm_t *comm,
     return rc;
 }
 
+static inline int COLL_allgather(const void  *sendbuf,
+                                  int          sendcount,
+                                  COLL_dt_t   sendtype,
+                                  void        *recvbuf,
+                                  int          recvcount,
+                                  COLL_dt_t   recvtype,
+                                  COLL_comm_t *comm,
+                                  int          k,
+                                  int          halving,
+                                  int         *errflag)
+{
+    int rc=0;
+    /*Check if schedule already exists*/
+    /*generate the key to search this schedule*/
+    COLL_args_t coll_args = {.algo=COLL_NAME, .tsp=TRANSPORT_NAME, .nargs=8,\
+            .args={.allgather={.sbuf=sendbuf,.scount=sendcount,.st_id=(int) sendtype,.rbuf=recvbuf,.rcount=recvcount,.rt_id=(int) recvtype,.comm_id=comm->id,.halving=halving}}};
+    /*search for schedule*/
+    COLL_sched_t *s = MPIC_get_sched((MPIC_coll_args_t)coll_args);
+    int tag = (*comm->curTag)++;
+    if(s==NULL){/*sched does not exist*/
+        if(0) fprintf(stderr, "schedule does not exist\n");
+        s = (COLL_sched_t*)TSP_allocate_mem(sizeof(COLL_sched_t));
+
+        COLL_sched_init(s,tag);
+        rc = COLL_sched_allgather_recexch(sendbuf,sendcount,sendtype,recvbuf,
+
+                                recvcount,recvtype,tag,comm,s,k,halving);
+        MPIC_add_sched((MPIC_coll_args_t)coll_args, (void*)s, COLL_sched_free);
+    }else{
+        COLL_sched_reset(s,tag);
+        if(0) fprintf(stderr, "schedule already exists\n");
+    }
+    COLL_sched_kick(s);
+    return rc;
+}
 /*Unnecessary unless we non-blocking colls here*/
 static inline int COLL_kick(COLL_queue_elem_t * elem)
 {

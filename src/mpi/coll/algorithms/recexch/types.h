@@ -47,5 +47,8 @@ typedef struct {
         struct {
             void *sbuf; void *rbuf; int count; int dt_id; int op_id; int comm_id;
         }allreduce;
+        struct {
+            void *sbuf; int scount; int st_id; void *rbuf; int rcount; int rt_id; int comm_id; int halving;
+        }allgather;
     } args;
 } COLL_args_t;
