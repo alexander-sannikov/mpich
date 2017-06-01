@@ -11,25 +11,25 @@
 #include "../tree/tree_def.h"
 
 typedef struct COLL_comm_t {
-    int id; /*unique id for the communicator*/
+    int id;                     /*unique id for the communicator */
     MPIR_Comm *mpir_comm;
-    /*Although rank and size can be obtained from mpir_comm, 
+    /*Although rank and size can be obtained from mpir_comm,
      *storing them here for ease of accessibility*/
     int rank;
     int size;
     int tag;
 
-    int max_k; /*value of radix k up to which we may run collective algorithms*/
-    
-    /*store kary and knomial trees*/
+    int max_k;                  /*value of radix k up to which we may run collective algorithms */
+
+    /*store kary and knomial trees */
     COLL_tree_t *kary_tree;
     COLL_tree_t *knomial_tree;
-    
-    /*Communicators for multileader optimization*/
+
+    /*Communicators for multileader optimization */
     //COLL_comm_t *subcomm; /*subcommunicator to which I belong*/
-    /*COLL_comm_t *subcomm_roots_comm;communicator of rank 0 in each subcomm, 
-                                    this will be non-NULL only on rank 0 of comm*/
-    bool is_subcomm; /*if a subcomm, do not create further subcomms*/
+    /*COLL_comm_t *subcomm_roots_comm;communicator of rank 0 in each subcomm,
+     * this will be non-NULL only on rank 0 of comm */
+    bool is_subcomm;            /*if a subcomm, do not create further subcomms */
 
 } COLL_comm_t;
 

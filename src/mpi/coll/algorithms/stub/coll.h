@@ -22,7 +22,7 @@ static inline int COLL_init()
 }
 
 
-static inline int COLL_comm_init(COLL_comm_t * comm, int id, int * tag, int rank, int size)
+static inline int COLL_comm_init(COLL_comm_t * comm, int id, int *tag, int rank, int size)
 {
     TSP_comm_init(&comm->tsp_comm, COLL_COMM_BASE(comm));
     return 0;
@@ -60,8 +60,7 @@ static inline int COLL_allgatherv(const void *sendbuf,
 static inline int COLL_allreduce(const void *sendbuf,
                                  void *recvbuf,
                                  int count,
-                                 COLL_dt_t datatype,
-                                 COLL_op_t op, COLL_comm_t * comm, int *errflag)
+                                 COLL_dt_t datatype, COLL_op_t op, COLL_comm_t * comm, int *errflag)
 {
     COLL_Assert(0);
     return 0;
@@ -71,8 +70,7 @@ static inline int COLL_alltoall(const void *sendbuf,
                                 int sendcount,
                                 COLL_dt_t sendtype,
                                 void *recvbuf,
-                                int recvcount,
-                                COLL_dt_t recvtype, COLL_comm_t * comm, int *errflag)
+                                int recvcount, COLL_dt_t recvtype, COLL_comm_t * comm, int *errflag)
 {
     COLL_Assert(0);
     return 0;
@@ -115,8 +113,7 @@ static inline int COLL_bcast(void *buffer,
 static inline int COLL_exscan(const void *sendbuf,
                               void *recvbuf,
                               int count,
-                              COLL_dt_t datatype,
-                              COLL_op_t op, COLL_comm_t * comm, int *errflag)
+                              COLL_dt_t datatype, COLL_op_t op, COLL_comm_t * comm, int *errflag)
 {
     COLL_Assert(0);
     return 0;
@@ -350,8 +347,7 @@ static inline int COLL_ireduce_scatter_block(const void *sendbuf,
                                              void *recvbuf,
                                              int recvcount,
                                              COLL_dt_t datatype,
-                                             COLL_op_t op,
-                                             COLL_comm_t * comm, COLL_req_t * request)
+                                             COLL_op_t op, COLL_comm_t * comm, COLL_req_t * request)
 {
     COLL_Assert(0);
     return 0;
@@ -472,8 +468,7 @@ static inline int COLL_ineighbor_allgather(const void *sendbuf,
                                            COLL_dt_t sendtype,
                                            void *recvbuf,
                                            int recvcount,
-                                           COLL_dt_t recvtype,
-                                           COLL_comm_t * comm, COLL_sched_t * s)
+                                           COLL_dt_t recvtype, COLL_comm_t * comm, COLL_sched_t * s)
 {
     COLL_Assert(0);
     return 0;
@@ -498,8 +493,7 @@ static inline int COLL_ineighbor_alltoall(const void *sendbuf,
                                           COLL_dt_t sendtype,
                                           void *recvbuf,
                                           int recvcount,
-                                          COLL_dt_t recvtype,
-                                          COLL_comm_t * comm, COLL_sched_t * s)
+                                          COLL_dt_t recvtype, COLL_comm_t * comm, COLL_sched_t * s)
 {
     COLL_Assert(0);
     return 0;
@@ -512,8 +506,7 @@ static inline int COLL_ineighbor_alltoallv(const void *sendbuf,
                                            void *recvbuf,
                                            const int recvcounts[],
                                            const int rdispls[],
-                                           COLL_dt_t recvtype,
-                                           COLL_comm_t * comm, COLL_sched_t * s)
+                                           COLL_dt_t recvtype, COLL_comm_t * comm, COLL_sched_t * s)
 {
     COLL_Assert(0);
     return 0;

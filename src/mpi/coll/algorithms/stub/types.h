@@ -13,7 +13,7 @@ typedef TSP_dt_t COLL_dt_t;
 typedef TSP_op_t COLL_op_t;
 
 typedef struct COLL_comm_t {
-    int id; /*unique id for the communicator*/
+    int id;                     /*unique id for the communicator */
     TSP_comm_t tsp_comm;
 } COLL_comm_t;
 
@@ -25,10 +25,10 @@ typedef struct COLL_sched_t {
     TSP_sched_t tsp_sched;
 } COLL_sched_t;
 
-typedef long int  COLL_aint_t;
+typedef long int COLL_aint_t;
 
 typedef struct COLL_global_t {
 } COLL_global_t;
 
 typedef struct {
-}COLL_args_t;
+} COLL_args_t;

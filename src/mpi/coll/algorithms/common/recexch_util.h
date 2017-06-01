@@ -16,10 +16,9 @@
 This is a simple function to compare two integers.
 It is used for sorting list of ranks.
 */
-static inline
-int intcmpfn(const void *a, const void *b)
+static inline int intcmpfn(const void *a, const void *b)
 {
-    return (*(int *)a - *(int *)b);
+    return (*(int *) a - *(int *) b);
 }
 
 #endif /* COLLRECEXCH_UTIL_H_INCLUDED */
