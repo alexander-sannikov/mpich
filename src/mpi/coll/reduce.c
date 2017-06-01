@@ -61,7 +61,15 @@ cvars:
         1 - KNOMIAL_reduce
         2 - KARY_reduce
 
-
+    - name        : MPIR_CVAR_REDUCE_TREE_KVAL
+      category    : COLLECTIVE
+      type        : int
+      default     : 2
+      class       : device
+      verbosity   : MPI_T_VERBOSITY_USER_BASIC
+      scope       : MPI_T_SCOPE_ALL_EQ
+      description : >-
+        Radix k for tree based reduce
 === END_MPI_T_CVAR_INFO_BLOCK ===
 */
 
@@ -887,20 +895,19 @@ int MPIR_Reduce_intra (
     int valid_coll[] = {1,2};
     int use_coll = (MPIR_CVAR_USE_REDUCE < 0) ? MPIR_Coll_cycle_algorithm(comm_ptr,
                             valid_coll, 2) : MPIR_CVAR_USE_REDUCE;
-    use_coll=1;
     switch(use_coll) {
         case 0:
             break;
         case 1:
             mpi_errno = MPIC_MPICH_KNOMIAL_reduce(sendbuf, recvbuf, count,
                                             datatype, op, root,
-                                            &(MPIC_COMM(comm_ptr)->mpich_knomial), errflag, 2, 1);
+                                            &(MPIC_COMM(comm_ptr)->mpich_knomial), errflag, MPIR_CVAR_REDUCE_TREE_KVAL, 1);
             goto fn_exit;
             break;
         case 2:
             mpi_errno = MPIC_MPICH_KARY_reduce(sendbuf, recvbuf, count,
                                             datatype, op, root,
-                                            &(MPIC_COMM(comm_ptr)->mpich_kary), errflag, 2, 0);
+                                            &(MPIC_COMM(comm_ptr)->mpich_kary), errflag, MPIR_CVAR_REDUCE_TREE_KVAL, 0);
             goto fn_exit;
             break;
     }
