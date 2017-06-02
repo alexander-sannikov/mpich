@@ -428,7 +428,7 @@ typedef struct MPIDU_Datatype {
 #ifdef MPID_DEV_DATATYPE_DECL
     MPID_DEV_DATATYPE_DECL
 #endif
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     MPIC_DT_DECL
 #endif
 } MPIDU_Datatype;

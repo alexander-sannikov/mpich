@@ -31,6 +31,7 @@ static inline void COLL_tree_init(int rank, int nranks, int k, int root, COLL_tr
 
 static inline int COLL_tree_dump(int tree_size, int root, int k)
 {
+    int mpi_errno = MPI_SUCCESS;
     int i;
     const char *name = "collective tree";
 
@@ -52,7 +53,7 @@ static inline int COLL_tree_dump(int tree_size, int root, int k)
     }
 
     fprintf(stderr, "}\n");
-    return 0;
+    return mpi_errno;
 }
 
 static inline int
@@ -61,6 +62,7 @@ COLL_sched_bcast_tree(void *buffer,
                  COLL_dt_t datatype,
                  int root, int tag, COLL_comm_t * comm, int k, COLL_sched_t * s, int finalize)
 {
+    int mpi_errno = MPI_SUCCESS;
     COLL_tree_t myTree;
     int i, j;
     COLL_tree_comm_t *mycomm = &comm->tree_comm;
@@ -89,13 +91,14 @@ COLL_sched_bcast_tree(void *buffer,
         TSP_fence(&s->tsp_sched);
         TSP_sched_commit(&s->tsp_sched);
     }
-    return 0;
+    return mpi_errno;
 }
 
 static inline int
 COLL_sched_bcast_tree_pipelined(void *buffer, int count, COLL_dt_t datatype, int root, int tag,
                                  COLL_comm_t *comm, int k, int segsize, COLL_sched_t *s, int finalize)
 {
+    int mpi_errno = MPI_SUCCESS;
     int segment_size = (segsize==-1)?count:segsize;
     /*NOTE: Change this so that the segsize is in bytes and then calculate its closest number of elements of type datatype*/
     int num_chunks = (count+segment_size-1)/segment_size; /*ceil of count/segment_size*/
@@ -128,7 +131,7 @@ COLL_sched_bcast_tree_pipelined(void *buffer, int count, COLL_dt_t datatype, int
         TSP_fence(&s->tsp_sched);
         TSP_sched_commit(&s->tsp_sched);
     }
-    return 0;
+    return mpi_errno;
 }
 
 static inline int
@@ -141,6 +144,7 @@ COLL_sched_reduce_tree(const void *sendbuf,
                   int tag,
                   COLL_comm_t * comm, int k, int is_commutative, COLL_sched_t * s, int finalize, bool per_child_buffer)
 {
+    int mpi_errno = MPI_SUCCESS;
     COLL_tree_t myTree;
     int i, j, is_contig;
     size_t lb, extent, type_size;
@@ -293,7 +297,7 @@ COLL_sched_reduce_tree(const void *sendbuf,
     TSP_free_mem(vtcs);
     TSP_free_mem(recv_id);
     TSP_free_mem(reduce_id);
-    return 0;
+    return mpi_errno;
 }
 
 static inline int
@@ -359,6 +363,7 @@ COLL_sched_allreduce_tree(const void *sendbuf,
                      COLL_op_t op,
                      int tag, COLL_comm_t * comm, int k, COLL_sched_t * s, int finalize)
 {
+    int mpi_errno = MPI_SUCCESS;
     int is_commutative, is_inplace, is_contig;
     size_t lb, extent, type_size;
     void *tmp_buf = NULL;
@@ -389,7 +394,7 @@ COLL_sched_allreduce_tree(const void *sendbuf,
     if (finalize) {
         TSP_sched_commit(&s->tsp_sched);
     }
-    return 0;
+    return MPI_SUCCESS;
 }
 
 
@@ -399,6 +404,7 @@ COLL_sched_barrier_tree(int                 tag,
                    int                 k,
                    COLL_sched_t *s)
 {
+    int mpi_errno = MPI_SUCCESS;
     int i, j;
     COLL_tree_comm_t *mycomm    = &comm->tree_comm;
     COLL_tree_t      *tree      = &mycomm->tree;
@@ -432,5 +438,5 @@ COLL_sched_barrier_tree(int                 tag,
         SCHED_FOREACHCHILDDO(TSP_send(NULL,0,dt,j,tag,&comm->tsp_comm,
                                       &s->tsp_sched,1,&recv_id));
     }
-    return 0;
+    return mpi_errno;
 }

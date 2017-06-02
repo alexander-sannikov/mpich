@@ -12,7 +12,6 @@
 #define OFI_COMM_H_INCLUDED
 
 #include "ofi_impl.h"
-#include "ofi_coll_impl.h"
 #include "mpl_utlist.h"
 
 #undef FUNCNAME

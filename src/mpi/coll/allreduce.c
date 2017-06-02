@@ -6,8 +6,8 @@
 
 #include "mpiimpl.h"
 #include "collutil.h"
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -322,7 +322,7 @@ int MPIR_Allreduce_intra (
     {
         /* homogeneous */
 
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
         {
 
             int valid_coll[] = {1,2,3,4};

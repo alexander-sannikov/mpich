@@ -6,8 +6,8 @@
  */
 
 #include "mpiimpl.h"
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -294,7 +294,7 @@ int MPIR_Barrier(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
 
     if (comm_ptr->comm_kind == MPIR_COMM_KIND__INTRACOMM) {
         /* intracommunicator */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
         int valid_coll[] = {0,1,2,3};
         int use_coll = (MPIR_CVAR_USE_BARRIER < 0)?
                             MPIR_Coll_cycle_algorithm(comm_ptr, valid_coll, 1) :
@@ -303,7 +303,7 @@ int MPIR_Barrier(MPIR_Comm *comm_ptr, MPIR_Errflag_t *errflag)
         case 0:
 #endif
             mpi_errno = MPIR_Barrier_intra( comm_ptr, errflag );
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
             break;
         case 1:
             mpi_errno = MPIC_MPICH_DISSEM_barrier( &(MPIC_COMM(comm_ptr)->mpich_dissem),

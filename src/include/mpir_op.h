@@ -109,7 +109,7 @@ typedef struct MPIR_Op {
 #ifdef MPID_DEV_OP_DECL
      MPID_DEV_OP_DECL
 #endif
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
      MPIC_OP_DECL
 #endif
   } MPIR_Op;

@@ -139,7 +139,7 @@ static inline void MPIC_MPICH_sched_init(MPIC_MPICH_sched_t *sched, int tag)
     MPIC_MPICH_reset_issued_list(sched);
 }
 
-static inline void MPIC_MPICH_sched_reset(MPIC_MPICH_sched_t *sched, int tag){
+static inline int MPIC_MPICH_sched_reset(MPIC_MPICH_sched_t *sched, int tag){
     int i;
     sched->num_completed=0;
     sched->tag = tag;
@@ -151,21 +151,22 @@ static inline void MPIC_MPICH_sched_reset(MPIC_MPICH_sched_t *sched, int tag){
             vtx->nbargs.recv_reduce.done=0;
     }
     MPIC_MPICH_reset_issued_list(sched);
+    return MPI_SUCCESS;
 }
 
-static inline void MPIC_MPICH_sched_commit(MPIC_MPICH_sched_t *sched)
+static inline int MPIC_MPICH_sched_commit(MPIC_MPICH_sched_t *sched)
 {
-
+    return MPI_SUCCESS;
 }
 
-static inline void MPIC_MPICH_sched_start(MPIC_MPICH_sched_t *sched)
+static inline int MPIC_MPICH_sched_start(MPIC_MPICH_sched_t *sched)
 {
-
+    return MPI_SUCCESS;
 }
 
-static inline void MPIC_MPICH_sched_finalize(MPIC_MPICH_sched_t *sched)
+static inline int MPIC_MPICH_sched_finalize(MPIC_MPICH_sched_t *sched)
 {
-
+    return MPI_SUCCESS;
 }
 
 
@@ -538,7 +539,6 @@ static inline int MPIC_MPICH_queryfcn(
                            rr->inoutbuf,rr->count,dt);
         }
 
-        //MPL_free(rr->inbuf);
         MPIR_Grequest_complete_impl(rr->vtxp->mpid_req[1]);
         rr->done = 1;
     }
@@ -775,7 +775,6 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t *rp, MPIC_MP
             case MPIC_MPICH_KIND_FREE_MEM:
                 if(0) fprintf(stderr, "  --> MPICH transport (freemem) complete\n");
 
-                MPIC_MPICH_free_mem(rp->nbargs.free_mem.ptr);
                 MPIC_MPICH_record_vtx_completion(rp, sched);
                 break;
 

@@ -6,8 +6,8 @@
  */
 
 #include "mpiimpl.h"
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -189,7 +189,7 @@ int MPIR_Alltoall_intra(
     MPID_Datatype_get_size_macro(sendtype, sendtype_size);
     nbytes = sendtype_size * sendcount;
 
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     int valid_coll[] = {1};
     int use_coll = (MPIR_CVAR_USE_ALLTOALL < 0) ?
                 MPIR_Coll_cycle_algorithm(comm_ptr, valid_coll, 1) : MPIR_CVAR_USE_ALLTOALL;

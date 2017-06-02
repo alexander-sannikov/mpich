@@ -11,8 +11,8 @@
 #include "mpl_utlist.h"
 #include "mpl_uthash.h"
 
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -556,7 +556,7 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
         MPIR_ERR_POP(mpi_errno);
 
     /* Create collectives-specific infrastructure */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     mpi_errno = MPIC_comm_init(comm);
     if (mpi_errno)
         MPIR_ERR_POP(mpi_errno);
@@ -633,7 +633,7 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
             /* don't call MPIR_Comm_commit here */
 
             /* Create collectives-specific infrastructure */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
             mpi_errno = MPIC_comm_init(comm->node_comm);
             if (mpi_errno)
                 MPIR_ERR_POP(mpi_errno);
@@ -673,7 +673,7 @@ int MPIR_Comm_commit(MPIR_Comm * comm)
             /* don't call MPIR_Comm_commit here */
 
             /* Create collectives-specific infrastructure */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
             mpi_errno = MPIC_comm_init(comm->node_roots_comm);
             if (mpi_errno)
                 MPIR_ERR_POP(mpi_errno);
@@ -980,7 +980,7 @@ int MPIR_Comm_delete_internal(MPIR_Comm * comm_ptr)
             MPIR_Process.comm_parent = NULL;
 
         /* Cleanup collectives-specific infrastructure */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
         mpi_errno = MPIC_comm_cleanup(comm_ptr);
         if (mpi_errno)
             MPIR_ERR_POP(mpi_errno);

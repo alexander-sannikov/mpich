@@ -24,8 +24,8 @@
 #include <unistd.h>
 #endif
 
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -506,7 +506,7 @@ int MPIR_Init_thread(int * argc, char ***argv, int required, int * provided)
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 
     /* Init extended collectives infrastructure */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     mpi_errno = MPIC_init();
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 #endif

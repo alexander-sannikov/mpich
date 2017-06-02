@@ -152,7 +152,7 @@ struct MPIR_Request {
     MPID_DEV_REQUEST_DECL
 #endif
     /* Collectives specific information */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     MPIC_REQ_DECL
 #endif
 };

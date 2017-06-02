@@ -6,8 +6,8 @@
  */
 
 #include "mpiimpl.h"
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "include/coll_impl.h"
 #endif
 
 
@@ -139,7 +139,7 @@ int MPI_Op_create(MPI_User_function *user_fn, int commute, MPI_Op *op)
     MPID_Op_commit_hook(op_ptr);
 #endif
 
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     MPIC_op_init(op_ptr);
 #endif
     /* ... end of body of routine ... */

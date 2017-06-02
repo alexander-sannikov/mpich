@@ -7,8 +7,8 @@
 
 #include "mpiimpl.h"
 #include "collutil.h"
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -1319,7 +1319,7 @@ int MPIR_Bcast_intra (
     if (nbytes == 0)
         goto fn_exit; /* nothing to do */
 
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     int valid_coll[] = {1,2};
     int use_coll = (MPIR_CVAR_USE_BCAST < 0) ?
                 MPIR_Coll_cycle_algorithm(comm_ptr, valid_coll, 2) : MPIR_CVAR_USE_BCAST;

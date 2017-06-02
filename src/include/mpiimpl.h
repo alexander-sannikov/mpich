@@ -196,7 +196,7 @@ typedef struct MPIR_Topology MPIR_Topology;
 #include "mpii_f77interface.h"
 #endif
 
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
 #include "mpir_coll_types.h"
 #endif
 
@@ -235,9 +235,6 @@ typedef struct MPIR_Topology MPIR_Topology;
 
 #include "mpidpost.h"
 
-/*****************************************************************************/
-/******************** PART 7: COLLECTIVES IMPLEMENTATION *********************/
-/*****************************************************************************/
 /* avoid conflicts in source files with old-style "char FCNAME[]" vars */
 #undef FUNCNAME
 #undef FCNAME

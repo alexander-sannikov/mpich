@@ -31,28 +31,28 @@ static inline int MPIC_BMPICH_comm_cleanup(MPIC_BMPICH_comm_t * comm)
         comm->mpid_comm = NULL;
 }
 
-static inline void MPIC_BMPICH_sched_init(MPIC_BMPICH_sched_t *sched, int tag)
+static inline int MPIC_BMPICH_sched_init(MPIC_BMPICH_sched_t *sched, int tag)
 {
     sched->total     = 0;
     sched->nbufs     = 0;
     sched->tag       = tag;
 }
 
-static inline void MPIC_BMPICH_sched_reset(MPIC_BMPICH_sched_t *sched, int tag){
+static inline int MPIC_BMPICH_sched_reset(MPIC_BMPICH_sched_t *sched, int tag){
     sched->tag = tag;
 }
 
-static inline void MPIC_BMPICH_sched_commit(MPIC_BMPICH_sched_t *sched)
+static inline int MPIC_BMPICH_sched_commit(MPIC_BMPICH_sched_t *sched)
 {
 
 }
 
-static inline void MPIC_BMPICH_sched_start(MPIC_BMPICH_sched_t *sched)
+static inline int MPIC_BMPICH_sched_start(MPIC_BMPICH_sched_t *sched)
 {
 
 }
 
-static inline void MPIC_BMPICH_sched_finalize(MPIC_BMPICH_sched_t *sched)
+static inline int MPIC_BMPICH_sched_finalize(MPIC_BMPICH_sched_t *sched)
 {
 
 }

@@ -13,7 +13,6 @@
 
 #include "ofi_impl.h"
 #include "mpir_cvars.h"
-#include "ofi_coll_impl.h"
 #include "pmi.h"
 #include "mpidu_shm.h"
 

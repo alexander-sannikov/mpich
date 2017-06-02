@@ -14,7 +14,7 @@
 #endif
 
 /* Extended collectives globals*/
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
 MPIC_global_t MPIC_global_instance;
 /*counters to assign unique ids to communicator, operations, and datatypes*/
 int MPIC_comm_counter;

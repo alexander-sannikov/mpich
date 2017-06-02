@@ -7,8 +7,8 @@
 
 #include "mpiimpl.h"
 #include "mpi_init.h"
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -238,7 +238,7 @@ int MPI_Finalize( void )
     MPIR_Debugger_set_aborting( (char *)0 );
 #endif
 
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     mpi_errno = MPIC_finalize();
     if (mpi_errno) MPIR_ERR_POP(mpi_errno);
 #endif

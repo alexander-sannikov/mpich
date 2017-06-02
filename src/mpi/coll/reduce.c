@@ -7,8 +7,8 @@
 
 #include "mpiimpl.h"
 #include "collutil.h"
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -886,7 +886,7 @@ int MPIR_Reduce_intra (
     }
     }
 
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     MPIR_Datatype *dt_ptr;
     MPID_Datatype_get_ptr(datatype, dt_ptr);
     MPIR_Op *op_p;

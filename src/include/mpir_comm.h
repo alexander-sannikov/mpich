@@ -198,7 +198,7 @@ struct MPIR_Comm {
 #ifdef MPID_DEV_COMM_DECL
     MPID_DEV_COMM_DECL
 #endif
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
     MPIC_COMM_DECL;
 #endif
 };

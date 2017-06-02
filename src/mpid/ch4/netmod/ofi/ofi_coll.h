@@ -12,7 +12,6 @@
 #define OFI_COLL_H_INCLUDED
 
 #include "ofi_impl.h"
-#include "ofi_coll_impl.h"
 
 #undef FUNCNAME
 #define FUNCNAME MPIDI_NM_mpi_barrier

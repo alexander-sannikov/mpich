@@ -8,8 +8,8 @@
 #include <mpiimpl.h>
 #include <mpidu_dataloop.h>
 #include <stdlib.h>
-#ifdef HAVE_EXT_COLL
-#include "mpir_coll_impl.h"
+#ifdef MPIC_ENABLE_EXT_COLL
+#include "coll_impl.h"
 #endif
 
 
@@ -105,7 +105,7 @@ int MPIDU_Type_dup(MPI_Datatype oldtype,
 #ifdef MPID_Type_commit_hook
             MPID_Type_commit_hook(new_dtp);
 #endif /* MPID_Type_commit_hook */
-#ifdef HAVE_EXT_COLL
+#ifdef MPIC_ENABLE_EXT_COLL
             MPIC_dt_init(new_dtp);
 #endif
         }

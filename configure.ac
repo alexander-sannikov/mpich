@@ -399,16 +399,16 @@ AC_ARG_ENABLE(ext-coll,
        level:
          yes       - Enabled (default)
          no        - Disabled (may improve build times and code size)
-    ],,enable_ext_coll=no)
+    ],,enable_ext_coll=yes)
 
 if test "$enable_ext_coll" = "yes" ; then
-    AC_DEFINE([HAVE_EXT_COLL], [1],
+    AC_DEFINE([MPIC_ENABLE_EXT_COLL], [1],
         [Define to enable extended collectives])
     AC_MSG_NOTICE([Extended collectives are enabled.])
 else
     AC_MSG_NOTICE([Extended collectives are disabled.])
 fi
-AM_CONDITIONAL([HAVE_EXT_COLL],[test "$enable_ext_coll" = "yes"])
+AM_CONDITIONAL([MPIC_ENABLE_EXT_COLL],[test "$enable_ext_coll" = "yes"])
 
 
 dnl We may want to force MPI_Aint to be the same size as MPI_Offset, 
@@ -4576,7 +4576,7 @@ AC_HEADER_STDC
 # Grrr.  OS/X fails the test for sys/uio.h because uio *requires* sys/types.h
 # to compile.  Thus, we'll make that a separate test
 # stddef.h is sometimes needed for types like wchar_t
-AC_CHECK_HEADERS(stdlib.h stdarg.h sys/types.h string.h inttypes.h limits.h stddef.h errno.h sys/socket.h sys/time.h unistd.h endian.h assert.h sys/param.h)
+AC_CHECK_HEADERS(stdlib.h stdarg.h sys/types.h string.h inttypes.h limits.h stddef.h errno.h sys/socket.h sys/time.h unistd.h endian.h assert.h sys/param.h sys/queue.h)
 AC_CACHE_CHECK([for sys/uio.h],ac_cv_header_sys_uio_h,[
 AC_TRY_COMPILE([
 #include <sys/types.h>
