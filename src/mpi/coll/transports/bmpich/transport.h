@@ -46,7 +46,7 @@ static inline void MPIC_BMPICH_sched_commit(MPIC_BMPICH_sched_t * sched)
 
 static inline void MPIC_BMPICH_sched_start(MPIC_BMPICH_sched_t * sched)
 {
-
+    sched->sched_started = 1;
 }
 
 static inline void MPIC_BMPICH_sched_finalize(MPIC_BMPICH_sched_t * sched)
@@ -439,6 +439,7 @@ static inline void *MPIC_BMPICH_allocate_buffer(size_t size, MPIC_BMPICH_sched_t
 
 static inline void MPIC_BMPICH_free_mem(void *ptr)
 {
+    MPIR_Assert(ptr!=NULL);
     MPL_free(ptr);
 }
 
@@ -519,7 +520,6 @@ static inline void MPIC_BMPICH_issue_request(int vtxid, MPIC_BMPICH_req_t * rp,
         if (0)
             fprintf(stderr, "  --> MPICH transport (freemem) complete\n");
 
-        MPIC_BMPICH_free_mem(rp->nbargs.free_mem.ptr);
         break;
 
     case MPIC_BMPICH_KIND_NOOP:
@@ -598,6 +598,10 @@ static inline void MPIC_BMPICH_free_buffers(MPIC_BMPICH_sched_t * s)
         /*free the temporary memory allocated by recv_reduce call */
         if (s->requests[i].kind == MPIC_BMPICH_KIND_RECV_REDUCE) {
             MPIC_BMPICH_free_mem(s->requests[i].nbargs.recv_reduce.inbuf);
+        }
+        if (sched->vtcs[i].kind == MPIC_BMPICH_KIND_FREE_MEM) {
+            MPIC_BMPICH_free_mem(s->requests[i].nbargs.free_mem.ptr);
+            s->requests[i].nbargs.free_mem.ptr = NULL;
         }
     }
     /*free temporary buffers */

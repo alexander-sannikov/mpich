@@ -22,6 +22,7 @@
 
 static inline void *MPIC_MPICH_allocate_mem(size_t size)
 {
+    MPIR_Assert(ptr!=NULL);
     return MPL_malloc(size);
 }
 
@@ -187,7 +188,7 @@ static inline void MPIC_MPICH_sched_commit(MPIC_MPICH_sched_t * sched)
 
 static inline void MPIC_MPICH_sched_start(MPIC_MPICH_sched_t * sched)
 {
-
+    sched->sched_started = 1;
 }
 
 static inline void MPIC_MPICH_sched_finalize(MPIC_MPICH_sched_t * sched)
@@ -786,8 +787,7 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t * rp,
 
         case MPIC_MPICH_KIND_FREE_MEM:
             MPIC_DBG("  --> MPICH transport (freemem) complete\n");
-
-            MPIC_MPICH_free_mem(rp->nbargs.free_mem.ptr);
+            /* We are do not free memory really, it will be needed on the next schedule call */
             MPIC_MPICH_record_vtx_completion(rp, sched);
             break;
 
@@ -955,6 +955,11 @@ static inline void MPIC_MPICH_free_buffers(MPIC_MPICH_sched_t * sched)
         /*free the temporary memory allocated by recv_reduce call */
         if (sched->vtcs[i].kind == MPIC_MPICH_KIND_RECV_REDUCE) {
             MPIC_MPICH_free_mem(sched->vtcs[i].nbargs.recv_reduce.inbuf);
+            sched->vtcs[i].nbargs.recv_reduce.inbuf = NULL;
+        }
+        if (sched->vtcs[i].kind == MPIC_MPICH_KIND_FREE_MEM) {
+            MPIC_MPICH_free_mem(sched->vtcs[i].nbargs.free_mem.ptr);
+            sched->vtcs[i].nbargs.free_mem.ptr = NULL;
         }
     }
     /*free temporary buffers */
@@ -964,7 +969,8 @@ static inline void MPIC_MPICH_free_buffers(MPIC_MPICH_sched_t * sched)
     MPIC_MPICH_free_mem(sched->buf_array.array);
 
     /*free each vtx and then the list of vtcs */
-    for (i = 0; i < sched->total; i++) {        /*up to sched->total because we init vertices only when we need them */
+    for (i = 0; i < sched->total; i++) {
+        /*up to sched->total because we init vertices only when we need them */
         MPIC_MPICH_free_vtx(&sched->vtcs[i]);
     }
     MPIC_MPICH_free_mem(sched->vtcs);
