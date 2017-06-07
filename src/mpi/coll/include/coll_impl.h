@@ -21,31 +21,13 @@ extern MPIC_global_t MPIC_global_instance;
 
 #include "../transports/stub/transport.h"
 #include "../transports/mpich/transport.h"
-#include "../transports/bmpich/transport.h"
 
 #include "../transports/stub/api_def.h"
-#include "../algorithms/stub/post.h"
 #include "../algorithms/tree/kary_post.h"
 #include "../algorithms/tree/knomial_post.h"
-#include "../algorithms/recexch/post.h"
-#include "../algorithms/dissem/post.h"
 #include "../src/tsp_namespace_undef.h"
 
 #include "../transports/mpich/api_def.h"
-#include "../algorithms/stub/post.h"
-#include "../algorithms/tree/kary_post.h"
-#include "../algorithms/tree/knomial_post.h"
-#include "../algorithms/recexch/post.h"
-#include "../algorithms/dissem/post.h"
-#include "../src/tsp_namespace_undef.h"
-
-#define TRANSPORT_NAME X_
-#define TRANSPORT_NAME_LC x
-#include "../algorithms/treebasic/post.h"
-#undef TRANSPORT_NAME
-#undef TRANSPORT_NAME_LC
-
-#include "../transports/bmpich/api_def.h"
 #include "../algorithms/tree/kary_post.h"
 #include "../algorithms/tree/knomial_post.h"
 #include "../src/tsp_namespace_undef.h"
@@ -93,7 +75,7 @@ static inline int MPIC_progress_hook()
     coll_count = MPIC_Progress(MPIC_NUM_ENTRIES, coll_entries);
     for (i = 0; i < coll_count; i++) {
         MPIC_req_t *base = (MPIC_req_t *) coll_entries[i];
-        MPIR_Request *req = container_of(base, MPIR_Request, ch4_coll);
+        MPIR_Request *req = container_of(base, MPIR_Request, coll);
         MPID_Request_complete(req);
     }
     return mpi_errno;
@@ -281,14 +263,14 @@ MPL_STATIC_INLINE_PREFIX int MPIC_init_builtin_ops()
 {
     int mpi_errno = MPI_SUCCESS;
     int i;
-    for( i = 0; i < MPIR_OP_N_BUILTIN; ++i) {
-        MPIR_Op_builtin[i].handle = MPI_MAX+i;
+    for (i = 0; i < MPIR_OP_N_BUILTIN; ++i) {
+        MPIR_Op_builtin[i].handle = MPI_MAX + i;
         MPIC_op_init(&MPIR_Op_builtin[i]);
     }
     return mpi_errno;
 }
 
-MPL_STATIC_INLINE_PREFIX int MPIC_Op_get_ptr(MPI_Op op, MPIR_Op **ptr)
+MPL_STATIC_INLINE_PREFIX int MPIC_Op_get_ptr(MPI_Op op, MPIR_Op ** ptr)
 {
     int mpi_errno = MPI_SUCCESS;
     if(HANDLE_GET_KIND(op) == HANDLE_KIND_BUILTIN)
@@ -296,8 +278,8 @@ MPL_STATIC_INLINE_PREFIX int MPIC_Op_get_ptr(MPI_Op op, MPIR_Op **ptr)
         *ptr = &MPIR_Op_builtin[(op & 0xFF) -1];
     } else {
         MPIR_Op *tmp;
-        MPIR_Op_get_ptr(op,tmp);
-        *ptr=tmp;
+        MPIR_Op_get_ptr(op, tmp);
+        *ptr = tmp;
     }
     return mpi_errno;
 }

@@ -109,8 +109,6 @@ cvars:
         0 - MPIR_bcast
         1 - KARY_Bcast
         2 - KNOMIAL_Bcast
-        3 - TREEBASIC_KARY_Bcast
-        4 - TREEBASIC_KNOMIAL_Bcast
 
     - name        : MPIR_CVAR_BCAST_KARY_KVAL
       category    : COLLECTIVE
@@ -1330,36 +1328,16 @@ int MPIR_Bcast_intra (
         case 1:
             mpi_errno = MPIC_MPICH_KARY_bcast(buffer, count,
                     datatype,
-                    root, &(MPIC_COMM(comm_ptr)->mpich_kary), errflag, MPIR_CVAR_BCAST_KARY_KVAL,MPIR_CVAR_BCAST_TREE_SEGSIZE);
+                    root, &(MPIC_COMM(comm_ptr)->mpich_kary), (int*)errflag, MPIR_CVAR_BCAST_KARY_KVAL,MPIR_CVAR_BCAST_TREE_SEGSIZE);
             goto fn_exit;
             break;
         case 2:
             mpi_errno = MPIC_MPICH_KNOMIAL_bcast(buffer, count,
                     datatype,
-                    root, &(MPIC_COMM(comm_ptr)->mpich_knomial), errflag, MPIR_CVAR_BCAST_KNOMIAL_KVAL,MPIR_CVAR_BCAST_TREE_SEGSIZE);
+                    root, &(MPIC_COMM(comm_ptr)->mpich_knomial), (int*)errflag, MPIR_CVAR_BCAST_KNOMIAL_KVAL,MPIR_CVAR_BCAST_TREE_SEGSIZE);
             goto fn_exit;
             break;
-        case 3:
-            mpi_errno = MPIC_X_TREEBASIC_bcast(buffer, count,
-                    datatype, root, &(MPIC_COMM(comm_ptr)->x_treebasic), errflag, 0);
-            goto fn_exit;
-            break;
-        case 4:
-            mpi_errno = MPIC_X_TREEBASIC_bcast(buffer, count,
-                    datatype, root, &(MPIC_COMM(comm_ptr)->x_treebasic), errflag, 1);
-            goto fn_exit;
-            break;
-        case 5:
-            mpi_errno = MPIC_BMPICH_KARY_bcast(buffer, count,
-                    datatype, root, 
-                    &(MPIC_COMM(comm_ptr)->bmpich_kary), errflag, MPIR_CVAR_BCAST_KARY_KVAL,MPIR_CVAR_BCAST_TREE_SEGSIZE);
-            goto fn_exit;
-            break;
-        case 6:
-            mpi_errno = MPIC_BMPICH_KNOMIAL_bcast(buffer, count,
-                    datatype, root, 
-                    &(MPIC_COMM(comm_ptr)->bmpich_knomial), errflag, MPIR_CVAR_BCAST_KNOMIAL_KVAL,MPIR_CVAR_BCAST_TREE_SEGSIZE);
-            goto fn_exit;
+        default:
             break;
     }
 #endif

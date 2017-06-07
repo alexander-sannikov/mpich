@@ -91,18 +91,14 @@ static inline int MPIC_MPICH_init()
     return 0;
 }
 
-static inline int MPIC_MPICH_comm_init(MPIC_MPICH_comm_t * comm, void* base)
+static inline void MPIC_MPICH_save_schedule( MPIC_MPICH_comm_t *comm,
+                                    void* key, int len, void* s)
 {
-    MPIR_Comm * mpi_comm = container_of(base, MPIR_Comm, ch4_coll);
-    comm->mpid_comm = mpi_comm;
+    MPIC_add_sched( &(comm->sched_cache), key, len, s);
 }
 
-static inline int MPIC_MPICH_comm_cleanup(MPIC_MPICH_comm_t * comm)
+static inline void MPIC_MPICH_reset_issued_list(MPIC_MPICH_sched_t * sched)
 {
-        comm->mpid_comm = NULL;
-}
-
-static inline void MPIC_MPICH_reset_issued_list(MPIC_MPICH_sched_t *sched){
     sched->issued_head = NULL;
     int i;
     /*If schedule is being reused, reset only used vtcs
@@ -119,10 +115,10 @@ static inline void MPIC_MPICH_reset_issued_list(MPIC_MPICH_sched_t *sched){
 static inline void MPIC_MPICH_vtx_init(MPIC_MPICH_vtx_t* vtx, int max_edges){
 }
 
-static inline void MPIC_MPICH_sched_init(MPIC_MPICH_sched_t *sched, int tag)
+static inline void MPIC_MPICH_sched_init(MPIC_MPICH_sched_t * sched, int tag)
 {
-    sched->total      = 0;
-    sched->num_completed  = 0;
+    sched->total = 0;
+    sched->num_completed = 0;
     sched->last_wait = -1;
     sched->tag       = tag;
     sched->max_vtcs = MPIC_MPICH_MAX_REQUESTS;
@@ -140,8 +136,9 @@ static inline void MPIC_MPICH_sched_init(MPIC_MPICH_sched_t *sched, int tag)
 }
 
 static inline int MPIC_MPICH_sched_reset(MPIC_MPICH_sched_t *sched, int tag){
+{
     int i;
-    sched->num_completed=0;
+    sched->num_completed = 0;
     sched->tag = tag;
     for(i=0; i<sched->total; i++){
         MPIC_MPICH_vtx_t* vtx = &sched->vtcs[i];
@@ -161,63 +158,123 @@ static inline int MPIC_MPICH_sched_commit(MPIC_MPICH_sched_t *sched)
 
 static inline int MPIC_MPICH_sched_start(MPIC_MPICH_sched_t *sched)
 {
+    sched->sched_started = 1;
     return MPI_SUCCESS;
 }
 
-static inline int MPIC_MPICH_sched_finalize(MPIC_MPICH_sched_t *sched)
+static inline MPIC_MPICH_sched_t* MPIC_MPICH_get_schedule(MPIC_MPICH_comm_t *comm,
+            void* key, int len, int tag, int *is_new)
+{
+    MPIC_MPICH_sched_t* s = MPIC_get_sched(comm->sched_cache, key, len);
+    if (s) {
+        MPIC_DBG("schedule is loaded from cache[%lX]\n",s);
+        *is_new = 0;
+        MPIC_MPICH_sched_reset(s,tag);
+    } else {
+        *is_new = 1;
+        s = MPL_malloc(sizeof(MPIC_MPICH_sched_t));
+        MPIC_DBG("Schedule is created:[%lX]\n",s);
+        MPIC_MPICH_sched_init(s,tag);
+    }
+    return s;
+}
+
+ /*frees any memory allocated for execution of this schedule */
+static inline void MPIC_MPICH_free_buffers(MPIC_MPICH_sched_t * s)
+{
+    int i;
+    for (i = 0; i < s->total; i++) {
+        /*free the temporary memory allocated by recv_reduce call */
+        if (s->requests[i].kind == MPIC_MPICH_KIND_RECV_REDUCE) {
+            MPIC_MPICH_free_mem(s->requests[i].nbargs.recv_reduce.inbuf);
+            s->requests[i].nbargs.recv_reduce.inbuf = NULL;
+        } else if (s->requests[i].kind == MPIC_MPICH_KIND_FREE_MEM) {
+        /*Really deallocate memory marked for deallocation*/
+            MPIC_MPICH_free_mem(s->requests[i].nbargs.free_mem.ptr);
+            s->requests[i].nbargs.free_mem.ptr = NULL;
+        }
+    }
+    /*free temporary buffers */
+    for (i = 0; i < s->nbufs; i++) {
+        MPIC_MPICH_free_mem(s->buf[i]);
+        s->buf[i] = NULL;
+    }
+}
+
+static inline void MPIC_MPICH_sched_destroy_fn(MPIC_MPICH_sched_t * s)
+{
+    MPIC_MPICH_free_buffers(s);
+    MPL_free(s);
+}
+
+
+static inline int MPIC_MPICH_comm_init(MPIC_MPICH_comm_t * comm, void *base)
+{
+    MPIR_Comm *mpi_comm = container_of(base, MPIR_Comm, coll);
+    comm->mpid_comm = mpi_comm;
+    comm->sched_cache = NULL;
+    return 0;
+}
+
+static inline int MPIC_MPICH_comm_cleanup(MPIC_MPICH_comm_t * comm)
+{
+    MPIC_delete_sched_table(comm->sched_cache,(MPIC_sched_free_fn)MPIC_MPICH_sched_destroy_fn);
+    comm->mpid_comm = NULL;
+    return 0;
+}
+
+static inline void MPIC_MPICH_sched_finalize(MPIC_MPICH_sched_t * sched)
 {
     return MPI_SUCCESS;
 }
 
 
-static inline void MPIC_MPICH_opinfo(MPIC_MPICH_op_t  op,
-                              int       *is_commutative)
+static inline void MPIC_MPICH_opinfo(MPIC_MPICH_op_t op, int *is_commutative)
 {
     MPIR_Op *op_ptr;
 
-    if(HANDLE_GET_KIND(op) == HANDLE_KIND_BUILTIN)
-        *is_commutative=1;
+    if (HANDLE_GET_KIND(op) == HANDLE_KIND_BUILTIN)
+        *is_commutative = 1;
     else {
         MPIR_Op_get_ptr(op, op_ptr);
 
-        if(op_ptr->kind == MPIR_OP_KIND__USER_NONCOMMUTE)
+        if (op_ptr->kind == MPIR_OP_KIND__USER_NONCOMMUTE)
             *is_commutative = 0;
         else
-            *is_commutative = 1 ;
+            *is_commutative = 1;
     }
 }
 
 static inline int MPIC_MPICH_isinplace(const void *buf)
 {
-    if(buf == MPI_IN_PLACE) return 1;
+    if (buf == MPI_IN_PLACE)
+        return 1;
 
     return 0;
 }
+
 static inline void MPIC_MPICH_dtinfo(MPIC_MPICH_dt_t dt,
-                              int      *iscontig,
-                              size_t   *size,
-                              size_t   *out_extent,
-                              size_t   *lower_bound)
+                                     int *iscontig,
+                                     size_t * size, size_t * out_extent, size_t * lower_bound)
 {
-    MPI_Aint true_lb,extent,true_extent,type_size;
+    MPI_Aint true_lb, extent, true_extent, type_size;
     MPID_Datatype_get_size_macro(dt, type_size);
-    MPIR_Type_get_true_extent_impl(dt,&true_lb,&true_extent);
-    MPID_Datatype_get_extent_macro(dt,extent);
-    MPIDI_Datatype_check_contig(dt,*iscontig);
+    MPIR_Type_get_true_extent_impl(dt, &true_lb, &true_extent);
+    MPID_Datatype_get_extent_macro(dt, extent);
+    MPIDI_Datatype_check_contig(dt, *iscontig);
     *size = type_size;
-    *out_extent  = MPL_MAX(extent,true_extent);
+    *out_extent = MPL_MAX(extent, true_extent);
     *lower_bound = true_lb;
 }
 
-static inline void MPIC_MPICH_addref_dt(MPIC_MPICH_dt_t dt,
-                                 int       up)
+static inline void MPIC_MPICH_addref_dt(MPIC_MPICH_dt_t dt, int up)
 {
     MPIR_Datatype *dt_ptr;
 
-    if(HANDLE_GET_KIND(dt) != HANDLE_KIND_BUILTIN) {
+    if (HANDLE_GET_KIND(dt) != HANDLE_KIND_BUILTIN) {
         MPID_Datatype_get_ptr(dt, dt_ptr);
 
-        if(up)
+        if (up)
             MPID_Datatype_add_ref(dt_ptr);
         else
             MPID_Datatype_release(dt_ptr);
@@ -325,7 +382,7 @@ static inline int MPIC_MPICH_get_new_vtx(MPIC_MPICH_sched_t *sched, MPIC_MPICH_v
 
 /*This function should go away, keeping it there for smooth transition
 from phase array to completely DAG based collectives*/
-static inline int MPIC_MPICH_fence(MPIC_MPICH_sched_t *sched)
+static inline int MPIC_MPICH_fence(MPIC_MPICH_sched_t * sched)
 {
     //assert(sched->total < 32);
     if(0) fprintf(stderr, "TSP(mpich) : sched [fence] total=%ld \n", sched->total);
@@ -372,34 +429,30 @@ static inline int MPIC_MPICH_wait_for(MPIC_MPICH_sched_t* sched, int nvtcs, int 
     
 }
 
-
 static inline int MPIC_MPICH_wait(MPIC_MPICH_sched_t *sched)
 {
-    if(0) fprintf(stderr, "scheduling a wait\n");
+    MPIC_DBG("scheduling a wait\n");
     sched->last_wait = sched->total;
     return MPIC_MPICH_fence(sched);
 }
 
-static inline void MPIC_MPICH_addref_op(MPIC_MPICH_op_t op,
-                                 int       up)
+static inline void MPIC_MPICH_addref_op(MPIC_MPICH_op_t op, int up)
 {
-    MPIR_Op     *op_ptr;
+    MPIR_Op *op_ptr;
 
-    if(HANDLE_GET_KIND(op) != HANDLE_KIND_BUILTIN) {
+    if (HANDLE_GET_KIND(op) != HANDLE_KIND_BUILTIN) {
         MPIR_Op_get_ptr(op, op_ptr);
 
-        if(up)
+        if (up)
             MPIR_Op_add_ref(op_ptr);
         else
             MPIR_Op_release(op_ptr);
     }
 }
 
-static inline int MPIC_MPICH_addref_dt_nb(MPIC_MPICH_dt_t    dt,
-                                    int          up,
-                                    MPIC_MPICH_sched_t *sched,
-                                    int          n_invtcs,
-                                    int         *invtcs)
+static inline int MPIC_MPICH_addref_dt_nb(MPIC_MPICH_dt_t dt,
+                                          int up,
+                                          MPIC_MPICH_sched_t * sched, int n_invtcs, int *invtcs)
 {
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
@@ -413,11 +466,9 @@ static inline int MPIC_MPICH_addref_dt_nb(MPIC_MPICH_dt_t    dt,
     return vtx_id;
 }
 
-static inline int MPIC_MPICH_addref_op_nb(MPIC_MPICH_op_t    op,
-                                    int          up,
-                                    MPIC_MPICH_sched_t *sched,
-                                    int          n_invtcs,
-                                    int         *invtcs)
+static inline int MPIC_MPICH_addref_op_nb(MPIC_MPICH_op_t op,
+                                          int up,
+                                          MPIC_MPICH_sched_t * sched, int n_invtcs, int *invtcs)
 {
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
@@ -432,16 +483,14 @@ static inline int MPIC_MPICH_addref_op_nb(MPIC_MPICH_op_t    op,
 }
 
 
-static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t *sched);
-static inline int MPIC_MPICH_send(const void  *buf,
-                            int          count,
-                            MPIC_MPICH_dt_t    dt,
-                            int          dest,
-                            int          tag,
-                            MPIC_MPICH_comm_t  *comm,
-                            MPIC_MPICH_sched_t *sched,
-                            int          n_invtcs,
-                            int         *invtcs)
+static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t * sched);
+static inline int MPIC_MPICH_send(const void *buf,
+                                  int count,
+                                  MPIC_MPICH_dt_t dt,
+                                  int dest,
+                                  int tag,
+                                  MPIC_MPICH_comm_t * comm,
+                                  MPIC_MPICH_sched_t * sched, int n_invtcs, int *invtcs)
 {
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
@@ -460,16 +509,14 @@ static inline int MPIC_MPICH_send(const void  *buf,
     return vtx_id;
 }
 
-static inline int MPIC_MPICH_send_accumulate(const void  *buf,
-                                       int          count,
-                                       MPIC_MPICH_dt_t    dt,
-                                       MPIC_MPICH_op_t    op,
-                                       int          dest,
-                                       int          tag,
-                                       MPIC_MPICH_comm_t  *comm,
-                                       MPIC_MPICH_sched_t *sched,
-                                       int          n_invtcs,
-                                       int         *invtcs)
+static inline int MPIC_MPICH_send_accumulate(const void *buf,
+                                             int count,
+                                             MPIC_MPICH_dt_t dt,
+                                             MPIC_MPICH_op_t op,
+                                             int dest,
+                                             int tag,
+                                             MPIC_MPICH_comm_t * comm,
+                                             MPIC_MPICH_sched_t * sched, int n_invtcs, int *invtcs)
 {
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
@@ -488,15 +535,13 @@ static inline int MPIC_MPICH_send_accumulate(const void  *buf,
     return vtx_id;
 }
 
-static inline int MPIC_MPICH_recv(void        *buf,
-                            int          count,
-                            MPIC_MPICH_dt_t    dt,
-                            int          source,
-                            int          tag,
-                            MPIC_MPICH_comm_t  *comm,
-                            MPIC_MPICH_sched_t *sched,
-                            int          n_invtcs,
-                            int         *invtcs)
+static inline int MPIC_MPICH_recv(void *buf,
+                                  int count,
+                                  MPIC_MPICH_dt_t dt,
+                                  int source,
+                                  int tag,
+                                  MPIC_MPICH_comm_t * comm,
+                                  MPIC_MPICH_sched_t * sched, int n_invtcs, int *invtcs)
 {
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
@@ -515,28 +560,26 @@ static inline int MPIC_MPICH_recv(void        *buf,
     return vtx_id;
 }
 
-static inline int MPIC_MPICH_queryfcn(
-    void       *data,
-    MPI_Status *status)
+static inline int MPIC_MPICH_queryfcn(void *data, MPI_Status * status)
 {
     MPIC_MPICH_recv_reduce_arg_t *rr
         = (MPIC_MPICH_recv_reduce_arg_t *)data;
     if(rr->vtxp->mpid_req[0] == NULL && !rr->done) {
         MPI_Datatype dt = rr->datatype;
-        MPI_Op       op = rr->op;
+        MPI_Op op = rr->op;
 
         if(rr->flags==-1 || rr->flags & MPIC_FLAG_REDUCE_L) {
-            if(0) fprintf(stderr, "  --> MPICH transport (recv_reduce L) complete to %p\n",
+            MPIC_DBG( "  --> MPICH transport (recv_reduce L) complete to %p\n",
                               rr->inoutbuf);
 
-            MPIR_Reduce_local_impl(rr->inbuf,rr->inoutbuf,rr->count,dt,op);
-        } else {
-            if(0) fprintf(stderr, "  --> MPICH transport (recv_reduce R) complete to %p\n",
-                              rr->inoutbuf);
+            MPIR_Reduce_local_impl(rr->inbuf, rr->inoutbuf, rr->count, dt, op);
+        }
+        else {
+            MPIC_DBG("  --> MPICH transport (recv_reduce R) complete to %p\n",
+                        rr->inoutbuf);
 
-            MPIR_Reduce_local_impl(rr->inoutbuf,rr->inbuf,rr->count,dt,op);
-            MPIR_Localcopy(rr->inbuf,rr->count,dt,
-                           rr->inoutbuf,rr->count,dt);
+            MPIR_Reduce_local_impl(rr->inoutbuf, rr->inbuf, rr->count, dt, op);
+            MPIR_Localcopy(rr->inbuf, rr->count, dt, rr->inoutbuf, rr->count, dt);
         }
 
         MPIR_Grequest_complete_impl(rr->vtxp->mpid_req[1]);
@@ -544,7 +587,7 @@ static inline int MPIC_MPICH_queryfcn(
     }
 
     status->MPI_SOURCE = MPI_UNDEFINED;
-    status->MPI_TAG    = MPI_UNDEFINED;
+    status->MPI_TAG = MPI_UNDEFINED;
     MPI_Status_set_cancelled(status, 0);
     MPI_Status_set_elements(status, MPI_BYTE, 0);
     return MPI_SUCCESS;
@@ -588,12 +631,12 @@ static inline int MPIC_MPICH_recv_reduce(void        *buf,
     return vtx_id;
 }
 
-static inline int MPIC_MPICH_rank(MPIC_MPICH_comm_t  *comm)
+static inline int MPIC_MPICH_rank(MPIC_MPICH_comm_t * comm)
 {
     return comm->mpid_comm->rank;
 }
 
-static inline int MPIC_MPICH_size(MPIC_MPICH_comm_t *comm)
+static inline int MPIC_MPICH_size(MPIC_MPICH_comm_t * comm)
 {
     return comm->mpid_comm->local_size;
 }
@@ -625,30 +668,23 @@ static inline int MPIC_MPICH_reduce_local(const void  *inbuf,
     return vtx_id;
 }
 
-static inline int MPIC_MPICH_dtcopy(void       *tobuf,
-                             int         tocount,
-                             MPIC_MPICH_dt_t   totype,
-                             const void *frombuf,
-                             int         fromcount,
-                             MPIC_MPICH_dt_t   fromtype)
+static inline int MPIC_MPICH_dtcopy(void *tobuf,
+                                    int tocount,
+                                    MPIC_MPICH_dt_t totype,
+                                    const void *frombuf, int fromcount, MPIC_MPICH_dt_t fromtype)
 {
-    return MPIR_Localcopy(frombuf,   /* yes, parameters are reversed        */
-                          fromcount, /* MPICH forgot what memcpy looks like */
-                          fromtype,
-                          tobuf,
-                          tocount,
-                          totype);
+    return MPIR_Localcopy(frombuf,      /* yes, parameters are reversed        */
+                          fromcount,    /* MPICH forgot what memcpy looks like */
+                          fromtype, tobuf, tocount, totype);
 }
 
-static inline int MPIC_MPICH_dtcopy_nb(void        *tobuf,
-                                 int          tocount,
-                                 MPIC_MPICH_dt_t    totype,
-                                 const void  *frombuf,
-                                 int          fromcount,
-                                 MPIC_MPICH_dt_t    fromtype,
-                                 MPIC_MPICH_sched_t *sched,
-                                 int          n_invtcs,
-                                 int         *invtcs)
+static inline int MPIC_MPICH_dtcopy_nb(void *tobuf,
+                                       int tocount,
+                                       MPIC_MPICH_dt_t totype,
+                                       const void *frombuf,
+                                       int fromcount,
+                                       MPIC_MPICH_dt_t fromtype,
+                                       MPIC_MPICH_sched_t * sched, int n_invtcs, int *invtcs)
 {
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
@@ -680,10 +716,11 @@ static inline void MPIC_MPICH_add_elem_ptr_array(MPIC_MPICH_ptr_array *buf_array
 }
 
 /*This function allocates memory required for schedule execution.
- *This is recorded in the schedule so that this memory can be 
+ *This is recorded in the schedule so that this memory can be
  *freed when the schedule is destroyed
  */
-static inline void *MPIC_MPICH_allocate_buffer(size_t size, MPIC_MPICH_sched_t *s){
+static inline void *MPIC_MPICH_allocate_buffer(size_t size, MPIC_MPICH_sched_t * s)
+{
     void *buf = MPIC_MPICH_allocate_mem(size);
     /*record memory allocation*/
     MPIC_MPICH_add_elem_ptr_array(&s->buf_array, buf);
@@ -714,7 +751,7 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t *rp, MPIC_MP
             case MPIC_MPICH_KIND_SEND: {
                 if(0) fprintf(stderr, "  --> MPICH transport (isend) issued\n");
 
-                MPIR_Errflag_t  errflag  = MPIR_ERR_NONE;
+                MPIR_Errflag_t errflag = MPIR_ERR_NONE;
                 MPIC_Isend(rp->nbargs.sendrecv.buf,
                            rp->nbargs.sendrecv.count,
                            rp->nbargs.sendrecv.dt,
@@ -727,8 +764,8 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t *rp, MPIC_MP
             }
             break;
 
-            case MPIC_MPICH_KIND_RECV: {
-                if(0) fprintf(stderr, "  --> MPICH transport (irecv) issued\n");
+            case MPIC_MPICH_KIND_RECV:{
+                MPIC_DBG( "  --> MPICH transport (irecv) issued\n");
 
                 MPIC_Irecv(rp->nbargs.sendrecv.buf,
                            rp->nbargs.sendrecv.count,
@@ -750,55 +787,55 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t *rp, MPIC_MP
                 break;
 
             case MPIC_MPICH_KIND_ADDREF_OP:
-                MPIC_MPICH_addref_op(rp->nbargs.addref_op.op,
-                              rp->nbargs.addref_op.up);
+                MPIC_MPICH_addref_op(rp->nbargs.addref_op.op, rp->nbargs.addref_op.up);
 
 
-                if(0) fprintf(stderr, "  --> MPICH transport (addref op) complete\n");
-
+                MPIC_DBG("  --> MPICH transport (addref op) complete\n");
                 MPIC_MPICH_record_vtx_completion(rp, sched);
                 break;
 
             case MPIC_MPICH_KIND_DTCOPY:
                 MPIC_MPICH_dtcopy(rp->nbargs.dtcopy.tobuf,
-                           rp->nbargs.dtcopy.tocount,
-                           rp->nbargs.dtcopy.totype,
-                           rp->nbargs.dtcopy.frombuf,
-                           rp->nbargs.dtcopy.fromcount,
-                           rp->nbargs.dtcopy.fromtype);
-
+                              rp->nbargs.dtcopy.tocount,
+                              rp->nbargs.dtcopy.totype,
+                              rp->nbargs.dtcopy.frombuf,
+                              rp->nbargs.dtcopy.fromcount, rp->nbargs.dtcopy.fromtype);
                 if(0) fprintf(stderr, "  --> MPICH transport (dtcopy) complete\n");
                 MPIC_MPICH_record_vtx_completion(rp, sched);
 
                 break;
 
             case MPIC_MPICH_KIND_FREE_MEM:
+<<<<<<< HEAD
                 if(0) fprintf(stderr, "  --> MPICH transport (freemem) complete\n");
 
+=======
+                MPIC_DBG("  --> MPICH transport (freemem) complete\n");
+                /* We are do not free memory really, it will be needed on the next schedule call */
+                /*
+                MPIC_MPICH_free_mem(rp->nbargs.free_mem.ptr);
+                rp->nbargs.free_mem.ptr = NULL;
+                */
+>>>>>>> coll: code style cleanup and prep for pull request review
                 MPIC_MPICH_record_vtx_completion(rp, sched);
                 break;
 
             case MPIC_MPICH_KIND_NOOP:
-                if(0) fprintf(stderr, "  --> MPICH transport (noop) complete\n");
+                MPIC_DBG("  --> MPICH transport (noop) complete\n");
 
                 MPIC_MPICH_record_vtx_completion(rp, sched);
                 break;
 
-            case MPIC_MPICH_KIND_RECV_REDUCE: {
+        case MPIC_MPICH_KIND_RECV_REDUCE:{
                 MPIC_Irecv(rp->nbargs.recv_reduce.inbuf,
                            rp->nbargs.recv_reduce.count,
                            rp->nbargs.recv_reduce.datatype,
                            rp->nbargs.recv_reduce.source,
-                           sched->tag,
-                           rp->nbargs.recv_reduce.comm->mpid_comm,
-                           &rp->mpid_req[0]);
+                           sched->tag, rp->nbargs.recv_reduce.comm->mpid_comm, &rp->mpid_req[0]);
                 MPIR_Grequest_start_impl(MPIC_MPICH_queryfcn,
-                                         NULL,
-                                         NULL,
-                                         &rp->nbargs.recv_reduce,
-                                         &rp->mpid_req[1]);
+                                         NULL, NULL, &rp->nbargs.recv_reduce, &rp->mpid_req[1]);
 
-                if(0) fprintf(stderr, "  --> MPICH transport (recv_reduce) issued\n");
+                MPIC_DBG("  --> MPICH transport (recv_reduce) issued\n");
 
                 MPIC_MPICH_record_vtx_issue(rp, sched);
             }
@@ -806,17 +843,17 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t *rp, MPIC_MP
 
             case MPIC_MPICH_KIND_REDUCE_LOCAL:
                   if(rp->nbargs.reduce_local.flags==-1 || rp->nbargs.reduce_local.flags & MPIC_FLAG_REDUCE_L) {
-                          if(0) fprintf("rp->nbargs.reduce_local.flags %d \n",rp->nbargs.reduce_local.flags);
+                          MPIC_DBG("rp->nbargs.reduce_local.flags %ld \n",rp->nbargs.reduce_local.flags);
                           MPIR_Reduce_local_impl(rp->nbargs.reduce_local.inbuf,
                                                  rp->nbargs.reduce_local.inoutbuf,
                                                  rp->nbargs.reduce_local.count,
                                                  rp->nbargs.reduce_local.dt,
                                                  rp->nbargs.reduce_local.op);
-                          if(0) fprintf(stderr, "  --> MPICH transport (reduce local_L) complete\n");
+                           MPIC_DBG("  --> MPICH transport (reduce local_L) complete\n");
                    } else {
-                          printf("Right reduction rp->nbargs.reduce_local.flags %d \n",rp->nbargs.reduce_local.flags);
+                          MPIC_DBG("Right reduction rp->nbargs.reduce_local.flags %ld \n",rp->nbargs.reduce_local.flags);
                           MPIR_Reduce_local_impl(rp->nbargs.reduce_local.inoutbuf,
-                                                 rp->nbargs.reduce_local.inbuf,
+                                                 (void *)rp->nbargs.reduce_local.inbuf,
                                                  rp->nbargs.reduce_local.count,
                                                  rp->nbargs.reduce_local.dt,
                                                  rp->nbargs.reduce_local.op);
@@ -827,7 +864,7 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t *rp, MPIC_MP
                                          rp->nbargs.reduce_local.inoutbuf,
                                          rp->nbargs.reduce_local.count,
                                          rp->nbargs.reduce_local.dt);
-                          if(0) fprintf(stderr, "  --> MPICH transport (reduce local_R) complete\n");
+                          MPIC_DBG("  --> MPICH transport (reduce local_R) complete\n");
                    }
 
                 MPIC_MPICH_record_vtx_completion(rp, sched);
@@ -837,7 +874,7 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t *rp, MPIC_MP
 }
 
 
-static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t *sched)
+static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t * sched)
 {
     MPIC_MPICH_vtx_t *req, *rp;
     int i;
@@ -855,7 +892,7 @@ static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t *sched)
         else
             return 1;
     }
-    if(sched->total == sched->num_completed){
+    if (sched->total == sched->num_completed) {
         return 1;
     }
         /*fprintf(stderr, "issued list: ");
@@ -871,15 +908,14 @@ static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t *sched)
         rp = sched->vtx_iter;
         sched->vtx_iter = sched->vtx_iter->next_issued;
 
-        if(rp->state == MPIC_MPICH_STATE_ISSUED) {
-            MPI_Status     status;
-            MPIR_Request  *mpid_req0 = rp->mpid_req[0];
-            MPIR_Request  *mpid_req1 = rp->mpid_req[1];
+        if (rp->state == MPIC_MPICH_STATE_ISSUED) {
+            MPI_Status status;
+            MPIR_Request *mpid_req0 = rp->mpid_req[0];
+            MPIR_Request *mpid_req1 = rp->mpid_req[1];
 
-            if(mpid_req1) {
+            if (mpid_req1) {
                 (mpid_req1->u.ureq.greq_fns->query_fn)
-                (mpid_req1->u.ureq.greq_fns->grequest_extra_state,
-                 &status);
+                    (mpid_req1->u.ureq.greq_fns->grequest_extra_state, &status);
             }
 
             switch(rp->kind) {
@@ -928,15 +964,13 @@ static inline int MPIC_MPICH_test(MPIC_MPICH_sched_t *sched)
         //sched->vtx_iter = sched->vtx_iter->next_issued;
     }
     sched->last_issued->next_issued = NULL;
-
-    if(0){
-
-        if(sched->num_completed==sched->total) {
-            if(0) fprintf(stderr, "  --> MPICH transport (test) complete:  sched->total=%ld\n",
-                              sched->total);
+    #ifdef MPIC_DEBUG
+        if (sched->num_completed == sched->total) {
+            MPIC_DBG("  --> MPICH transport (test) complete:  sched->total=%ld\n",
+                        sched->total);
         }
-    }
-    return sched->num_completed==sched->total;
+    #endif
+        return sched->num_completed == sched->total;
 }
 
  /*frees any memory allocated for execution of this schedule*/
@@ -960,7 +994,5 @@ static inline void MPIC_MPICH_free_buffers(MPIC_MPICH_sched_t *sched){
     }
     MPIC_MPICH_free_mem(sched->vtcs);
 }
-
-
 
 #endif

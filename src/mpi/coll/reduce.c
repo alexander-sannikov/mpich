@@ -896,8 +896,6 @@ int MPIR_Reduce_intra (
     int use_coll = (MPIR_CVAR_USE_REDUCE < 0) ? MPIR_Coll_cycle_algorithm(comm_ptr,
                             valid_coll, 2) : MPIR_CVAR_USE_REDUCE;
     switch(use_coll) {
-        case 0:
-            break;
         case 1:
             mpi_errno = MPIC_MPICH_KNOMIAL_reduce(sendbuf, recvbuf, count,
                                             datatype, op, root,
@@ -909,6 +907,8 @@ int MPIR_Reduce_intra (
                                             datatype, op, root,
                                             &(MPIC_COMM(comm_ptr)->mpich_kary), errflag, MPIR_CVAR_REDUCE_TREE_KVAL, 0);
             goto fn_exit;
+            break;
+        default:
             break;
     }
 #endif

@@ -6,10 +6,6 @@
  */
 
 #include "mpiimpl.h"
-#ifdef MPIC_ENABLE_EXT_COLL
-#include "coll_impl.h"
-#endif
-
 
 /*
 === BEGIN_MPI_T_CVAR_INFO_BLOCK ===
@@ -55,28 +51,6 @@ cvars:
        max no. of irecvs/isends posted at a time in some alltoall
        algorithms. Setting it to 0 causes all irecvs/isends to be
        posted at once
-
-   - name        : MPIR_CVAR_USE_ALLTOALL
-     category    : COLLECTIVE
-     type        : int
-     default     : -1
-     class       : device
-     verbosity   : MPI_T_VERBOSITY_USER_BASIC
-     scope       : MPI_T_SCOPE_ALL_EQ
-     description : >-
-       Controls alltoall algorithm:
-       0 - MPIR_alltoall
-       1 - DISSEM_alltoall
-
-   - name        : MPIR_CVAR_ALLTOALL_BRUCKS_KVAL
-     category    : COLLECTIVE
-     type        : int
-     default     : 2
-     class       : device
-     verbosity   : MPI_T_VERBOSITY_USER_BASIC
-     scope       : MPI_T_SCOPE_ALL_EQ
-     description : >-
-        Radix k for Brucks AlltoAll algorithm
 
 === END_MPI_T_CVAR_INFO_BLOCK ===
 */
@@ -189,24 +163,6 @@ int MPIR_Alltoall_intra(
     MPID_Datatype_get_size_macro(sendtype, sendtype_size);
     nbytes = sendtype_size * sendcount;
 
-#ifdef MPIC_ENABLE_EXT_COLL
-    int valid_coll[] = {1};
-    int use_coll = (MPIR_CVAR_USE_ALLTOALL < 0) ?
-                MPIR_Coll_cycle_algorithm(comm_ptr, valid_coll, 1) : MPIR_CVAR_USE_ALLTOALL;
-
-    switch(use_coll) {
-        case 0:
-            break;
-        case 1:
-            mpi_errno = MPIC_MPICH_DISSEM_alltoall(sendbuf, sendcount, sendtype,
-                                    recvbuf, recvcount, recvtype, &(MPIC_COMM(comm_ptr)->mpich_dissem), 
-                                    errflag, MPIR_CVAR_ALLTOALL_BRUCKS_KVAL);
-            goto fn_exit;
-            break;
-    }
-#endif
-    
-    
     if (sendbuf == MPI_IN_PLACE) {
         /* We use pair-wise sendrecv_replace in order to conserve memory usage,
          * which is keeping with the spirit of the MPI-2.2 Standard.  But
