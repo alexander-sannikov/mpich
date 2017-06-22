@@ -205,6 +205,7 @@ struct MPIR_Comm {
 #ifdef MPID_DEV_COMM_DECL
     MPID_DEV_COMM_DECL
 #endif
+    MPIC_COMM_DECL
 };
 extern MPIR_Object_alloc_t MPIR_Comm_mem;
 
