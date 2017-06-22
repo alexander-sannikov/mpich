@@ -147,7 +147,7 @@ static inline int MPIDI_CH4R_mpi_win_set_info(MPIR_Win * win, MPIR_Info * info)
         curr_ptr = curr_ptr->next;
     }
 
-    mpi_errno = MPIR_Barrier_impl(win->comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(win->comm_ptr, &errflag);
   fn_exit:
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_SET_INFO);
     return mpi_errno;
@@ -752,7 +752,7 @@ static inline int MPIDI_CH4R_mpi_win_free(MPIR_Win ** win_ptr)
     MPIDI_CH4U_ACCESS_EPOCH_CHECK_NONE(win, mpi_errno, return mpi_errno);
     MPIDI_CH4U_EXPOSURE_EPOCH_CHECK_NONE(win, mpi_errno, return mpi_errno);
 
-    mpi_errno = MPIR_Barrier_impl(win->comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(win->comm_ptr, &errflag);
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
 
@@ -793,7 +793,7 @@ static inline int MPIDI_CH4R_mpi_win_fence(int massert, MPIR_Win * win)
      * MPI_Win_fence(MODE_NOPRECEDE)   MPI_Win_fence(MODE_NOPRECEDE)
      * MPI_Get(from rank 1)
      */
-    mpi_errno = MPIR_Barrier_impl(win->comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(win->comm_ptr, &errflag);
 
   fn_exit:
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_FENCE);
@@ -830,7 +830,7 @@ static inline int MPIDI_CH4R_mpi_win_create(void *base,
     win = *win_ptr;
     win->base = base;
 
-    mpi_errno = MPIR_Barrier_impl(comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(comm_ptr, &errflag);
 
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
@@ -895,7 +895,7 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
     shared_table[comm_ptr->rank].size = size;
     shared_table[comm_ptr->rank].disp_unit = disp_unit;
 
-    mpi_errno = MPIR_Allgather_impl(MPI_IN_PLACE,
+    mpi_errno = MPID_Allgather(MPI_IN_PLACE,
                                     0,
                                     MPI_DATATYPE_NULL,
                                     shared_table,
@@ -987,7 +987,7 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
             }
         }
 
-        mpi_errno = MPIR_Bcast_impl(&map_ptr, 1, MPI_UNSIGNED_LONG, 0, comm_ptr, &errflag);
+        mpi_errno = MPID_Bcast(&map_ptr, 1, MPI_UNSIGNED_LONG, 0, comm_ptr, &errflag);
 
         if (mpi_errno != MPI_SUCCESS)
             goto fn_fail;
@@ -1044,7 +1044,7 @@ static inline int MPIDI_CH4R_mpi_win_allocate_shared(MPI_Aint size,
     win->size = size;
 
     *(void **) base_ptr = (void *) win->base;
-    mpi_errno = MPIR_Barrier_impl(comm_ptr, &errflag);
+    mpi_errno = MPID_Barrier(comm_ptr, &errflag);
 
     if (fd >= 0)
         close(fd);
@@ -1143,7 +1143,7 @@ static inline int MPIDI_CH4R_mpi_win_allocate(MPI_Aint size,
     win->base = baseP;
 
     *(void **) baseptr = (void *) win->base;
-    mpi_errno = MPIR_Barrier_impl(comm, &errflag);
+    mpi_errno = MPID_Barrier(comm, &errflag);
 
     if (mpi_errno != MPI_SUCCESS)
         goto fn_fail;
@@ -1287,7 +1287,7 @@ static inline int MPIDI_CH4R_mpi_win_create_dynamic(MPIR_Info * info,
     if (rc != MPI_SUCCESS)
         goto fn_fail;
 
-    mpi_errno = MPIR_Barrier_impl(comm, &errflag);
+    mpi_errno = MPID_Barrier(comm, &errflag);
 
   fn_exit:
     MPIR_FUNC_VERBOSE_EXIT(MPID_STATE_MPIDI_CH4R_MPI_WIN_CREATE_DYNAMIC);
