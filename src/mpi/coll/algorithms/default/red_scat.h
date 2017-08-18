@@ -961,7 +961,7 @@ MPIC_INLINE int MPIC_DEFAULT_Reduce_scatter_inter(const void *sendbuf, void *rec
     if (comm_ptr->is_low_group) {
         /* reduce from right group to rank 0 */
         root = (rank == 0) ? MPI_ROOT : MPI_PROC_NULL;
-        mpi_errno = MPIR_Reduce_inter(sendbuf, tmp_buf, total_count, datatype, op,
+        mpi_errno = MPIR_Reduce(sendbuf, tmp_buf, total_count, datatype, op,
                                       root, comm_ptr, errflag);
         if (mpi_errno) {
             /* for communication errors, just record the error but continue */
@@ -972,8 +972,8 @@ MPIC_INLINE int MPIC_DEFAULT_Reduce_scatter_inter(const void *sendbuf, void *rec
 
         /* reduce to rank 0 of right group */
         root = 0;
-        mpi_errno = MPIR_Reduce_inter(sendbuf, tmp_buf, total_count, datatype, op,
-                                      root, comm_ptr, errflag);
+        mpi_errno = MPIR_Reduce(sendbuf, tmp_buf, total_count, datatype, op,
+                                root, comm_ptr, errflag);
         if (mpi_errno) {
             /* for communication errors, just record the error but continue */
             *errflag = MPIR_ERR_GET_CLASS(mpi_errno);
@@ -983,8 +983,8 @@ MPIC_INLINE int MPIC_DEFAULT_Reduce_scatter_inter(const void *sendbuf, void *rec
     } else {
         /* reduce to rank 0 of left group */
         root = 0;
-        mpi_errno = MPIR_Reduce_inter(sendbuf, tmp_buf, total_count, datatype, op,
-                                      root, comm_ptr, errflag);
+        mpi_errno = MPIR_Reduce(sendbuf, tmp_buf, total_count, datatype, op,
+                                root, comm_ptr, errflag);
         if (mpi_errno) {
             /* for communication errors, just record the error but continue */
             *errflag = MPIR_ERR_GET_CLASS(mpi_errno);
@@ -994,8 +994,8 @@ MPIC_INLINE int MPIC_DEFAULT_Reduce_scatter_inter(const void *sendbuf, void *rec
 
         /* reduce from right group to rank 0 */
         root = (rank == 0) ? MPI_ROOT : MPI_PROC_NULL;
-        mpi_errno = MPIR_Reduce_inter(sendbuf, tmp_buf, total_count, datatype, op,
-                                      root, comm_ptr, errflag);
+        mpi_errno = MPIR_Reduce(sendbuf, tmp_buf, total_count, datatype, op,
+                                root, comm_ptr, errflag);
         if (mpi_errno) {
             /* for communication errors, just record the error but continue */
             *errflag = MPIR_ERR_GET_CLASS(mpi_errno);
