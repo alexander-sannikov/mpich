@@ -39,6 +39,7 @@ MPIC_INLINE int COLL_comm_init(COLL_comm_t * comm, int *tag_ptr, int rank, int c
     COLL_tree_init(rank, comm_size, 0, k, 0, &mycomm->tree);
 
     comm->tree_comm.curTag = tag_ptr;
+    *tag_ptr = MPIR_FIRST_NBC_TAG;
     return 0;
 }
 
@@ -75,7 +76,7 @@ MPIC_INLINE int COLL_allreduce(const void *sendbuf,
 
     int is_new = 0;
     int tag = (*comm->tree_comm.curTag)++;
-
+    if (tag < MPIR_FIRST_NBC_TAG) tag = (*comm->tree_comm.curTag) = MPIR_FIRST_NBC_TAG;
     /* Check with the transport if schedule already exisits
      * If it exists, reset and return the schedule else
      * return a new empty schedule */
@@ -126,6 +127,7 @@ MPIC_INLINE int COLL_bcast_get_tree_schedule(void *buffer, int count, COLL_dt_t 
     int is_new = 0;
     int tag = (*comm->tree_comm.curTag)++;
 
+    if (tag < MPIR_FIRST_NBC_TAG) tag = (*comm->tree_comm.curTag) = MPIR_FIRST_NBC_TAG;
     /* Check with the transport if schedule already exisits
      * If it exists, reset and return the schedule else
      * return a new empty schedule */
@@ -135,7 +137,7 @@ MPIC_INLINE int COLL_bcast_get_tree_schedule(void *buffer, int count, COLL_dt_t 
     if (is_new) {
         MPIC_DBG("Schedule does not exist\n");
         /* generate the schedule */
-        mpi_errno = COLL_sched_bcast_tree_pipelined(buffer, count, datatype, root, tag, comm,
+        mpi_errno = COLL_sched_bcast_tree_pipelined(buffer, count, datatype, root, comm->tree_comm.curTag, comm,
                                                     tree_type, k, segsize, *sched, 1);
         /* store the schedule (it is optional for the transport to store the schedule */
         TSP_save_schedule(&comm->tsp_comm, (void *) &coll_args, sizeof(COLL_args_t),
@@ -225,6 +227,7 @@ MPIC_INLINE int COLL_reduce(const void *sendbuf,
 
     int is_new = 0;
     int tag = (*comm->tree_comm.curTag)++;
+    if (tag < MPIR_FIRST_NBC_TAG) tag = (*comm->tree_comm.curTag) = MPIR_FIRST_NBC_TAG;
 
     /* Check with the transport if schedule already exisits
      * If it exists, reset and return the schedule else
@@ -235,7 +238,7 @@ MPIC_INLINE int COLL_reduce(const void *sendbuf,
     if (is_new) {       /* schedule is new */
         /* generate the schedule */
         mpi_errno =
-            COLL_sched_reduce_tree_full_pipelined(sendbuf, recvbuf, count, datatype, op, root, tag,
+            COLL_sched_reduce_tree_full_pipelined(sendbuf, recvbuf, count, datatype, op, root, comm->tree_comm.curTag,
                                                   comm, tree_type, k, s, segsize, 0, nbuffers);
         /* save the schedule */
         TSP_save_schedule(&comm->tsp_comm, (void *) &coll_args, sizeof(COLL_args_t), (void *) s);
@@ -265,6 +268,7 @@ MPIC_INLINE int COLL_barrier(COLL_comm_t * comm, int *errflag, int tree_type, in
 
     int is_new = 0;
     int tag = (*comm->tree_comm.curTag)++;
+    if (tag < MPIR_FIRST_NBC_TAG) tag = (*comm->tree_comm.curTag) = MPIR_FIRST_NBC_TAG;
 
     /* Check with the transport if schedule already exisits
      * If it exists, reset and return the schedule else

@@ -541,7 +541,6 @@ MPIC_INLINE int MPIC_MPICH_send(const void *buf,
     /* assign a new vertex */
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
-    sched->tag = tag;
     vtxp->kind = MPIC_MPICH_KIND_SEND;
     MPIC_MPICH_init_vtx(sched, vtxp, vtx_id);
     MPIC_MPICH_add_vtx_dependencies(sched, vtx_id, n_invtcs, invtcs);
@@ -552,6 +551,7 @@ MPIC_INLINE int MPIC_MPICH_send(const void *buf,
     vtxp->nbargs.sendrecv.dt = dt;
     vtxp->nbargs.sendrecv.dest = dest;
     vtxp->nbargs.sendrecv.comm = comm;
+    vtxp->nbargs.sendrecv.tag_offt = tag - sched->tag;
     /* second request is not used */
     vtxp->mpid_req[1] = NULL;
 
@@ -573,7 +573,6 @@ MPIC_INLINE int MPIC_MPICH_send_accumulate(const void *buf,
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
 
-    sched->tag = tag;
     vtxp->kind = MPIC_MPICH_KIND_SEND;
     MPIC_MPICH_init_vtx(sched, vtxp, vtx_id);
     MPIC_MPICH_add_vtx_dependencies(sched, vtx_id, n_invtcs, invtcs);
@@ -584,6 +583,7 @@ MPIC_INLINE int MPIC_MPICH_send_accumulate(const void *buf,
     vtxp->nbargs.sendrecv.dt = dt;
     vtxp->nbargs.sendrecv.dest = dest;
     vtxp->nbargs.sendrecv.comm = comm;
+    vtxp->nbargs.sendrecv.tag_offt = tag - sched->tag;
     /* second request is not used */
     vtxp->mpid_req[1] = NULL;
 
@@ -604,7 +604,6 @@ MPIC_INLINE int MPIC_MPICH_recv(void *buf,
     MPIC_MPICH_vtx_t *vtxp;
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
 
-    sched->tag = tag;
     vtxp->kind = MPIC_MPICH_KIND_RECV;
     MPIC_MPICH_init_vtx(sched, vtxp, vtx_id);
     MPIC_MPICH_add_vtx_dependencies(sched, vtx_id, n_invtcs, invtcs);
@@ -615,6 +614,7 @@ MPIC_INLINE int MPIC_MPICH_recv(void *buf,
     vtxp->nbargs.sendrecv.dt = dt;
     vtxp->nbargs.sendrecv.dest = source;
     vtxp->nbargs.sendrecv.comm = comm;
+    vtxp->nbargs.sendrecv.tag_offt = tag - sched->tag;
     vtxp->mpid_req[1] = NULL;
 
     MPIC_DBG("TSP(mpich) : sched [%d] [recv]\n", vtx_id);
@@ -671,7 +671,6 @@ MPIC_INLINE int MPIC_MPICH_recv_reduce(void *buf,
 
     /* assign a vertex */
     int vtx_id = MPIC_MPICH_get_new_vtx(sched, &vtxp);
-    sched->tag = tag;
     vtxp->kind = MPIC_MPICH_KIND_RECV_REDUCE;
     MPIC_MPICH_init_vtx(sched, vtxp, vtx_id);
     MPIC_MPICH_add_vtx_dependencies(sched, vtx_id, n_invtcs, invtcs);
@@ -688,6 +687,7 @@ MPIC_INLINE int MPIC_MPICH_recv_reduce(void *buf,
     vtxp->nbargs.recv_reduce.vtxp = vtxp;
     vtxp->nbargs.recv_reduce.done = 0;
     vtxp->nbargs.recv_reduce.flags = flags;
+    vtxp->nbargs.recv_reduce.tag_offt = tag - sched->tag;
 
     MPIC_DBG("TSP(mpich) : sched [%d] [recv_reduce]\n", vtx_id);
 
@@ -848,7 +848,7 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t * vtxp,
                            vtxp->nbargs.sendrecv.count,
                            vtxp->nbargs.sendrecv.dt,
                            vtxp->nbargs.sendrecv.dest,
-                           sched->tag,
+                           sched->tag+vtxp->nbargs.sendrecv.tag_offt,
                            vtxp->nbargs.sendrecv.comm->mpid_comm, &vtxp->mpid_req[0], &errflag);
                 /* record vertex issue */
                 MPIC_MPICH_record_vtx_issue(vtxp, sched);
@@ -862,7 +862,8 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t * vtxp,
                            vtxp->nbargs.sendrecv.count,
                            vtxp->nbargs.sendrecv.dt,
                            vtxp->nbargs.sendrecv.dest,
-                           sched->tag, vtxp->nbargs.sendrecv.comm->mpid_comm, &vtxp->mpid_req[0]);
+                           sched->tag+vtxp->nbargs.sendrecv.tag_offt,
+                           vtxp->nbargs.sendrecv.comm->mpid_comm, &vtxp->mpid_req[0]);
                 /* record vertex issue */
                 MPIC_MPICH_record_vtx_issue(vtxp, sched);
                 MPIC_DBG("  --> MPICH transport (irecv) issued\n");
@@ -927,7 +928,7 @@ static inline void MPIC_MPICH_issue_vtx(int vtxid, MPIC_MPICH_vtx_t * vtxp,
                            vtxp->nbargs.recv_reduce.count,
                            vtxp->nbargs.recv_reduce.datatype,
                            vtxp->nbargs.recv_reduce.source,
-                           sched->tag, vtxp->nbargs.recv_reduce.comm->mpid_comm,
+                           sched->tag+vtxp->nbargs.recv_reduce.tag_offt, vtxp->nbargs.recv_reduce.comm->mpid_comm,
                            &vtxp->mpid_req[0]);
                 MPIR_Grequest_start_impl(MPIC_MPICH_queryfcn, NULL, NULL, &vtxp->nbargs.recv_reduce,
                                          &vtxp->mpid_req[1]);

@@ -127,7 +127,7 @@ COLL_sched_bcast_tree(void *buffer, int count, COLL_dt_t datatype, int root, int
 #define FUNCNAME COLL_sched_bcast_tree_pipelined
 /* Routine to schedule a pipelined tree based broadcast */
 MPIC_INLINE int
-COLL_sched_bcast_tree_pipelined(void *buffer, int count, COLL_dt_t datatype, int root, int tag,
+COLL_sched_bcast_tree_pipelined(void *buffer, int count, COLL_dt_t datatype, int root, int *tag,
                                 COLL_comm_t * comm, int tree_type, int k, int segsize,
                                 TSP_sched_t * sched, int finalize)
 {
@@ -164,9 +164,10 @@ COLL_sched_bcast_tree_pipelined(void *buffer, int count, COLL_dt_t datatype, int
     for (i = 0; i < num_chunks; i++) {
         int msgsize = (i < num_chunks_floor) ? chunk_size_floor : chunk_size_ceil;
         mpi_errno =
-            COLL_sched_bcast_tree((char *) buffer + offset * extent, msgsize, datatype, root, tag,
+            COLL_sched_bcast_tree((char *) buffer + offset * extent, msgsize, datatype, root, *tag,
                                   comm, tree_type, k, sched, 0);
         offset += msgsize;
+        (*tag)++;
     }
 
     /* if this is final part of the schedule, commit it */
@@ -446,7 +447,7 @@ COLL_sched_reduce_tree_full(const void *sendbuf,
 /* Routing to schedule a pipelined tree based reduce */
 MPIC_INLINE int
 COLL_sched_reduce_tree_full_pipelined(const void *sendbuf, void *recvbuf, int count,
-                                      COLL_dt_t datatype, COLL_op_t op, int root, int tag,
+                                      COLL_dt_t datatype, COLL_op_t op, int root, int *tag,
                                       COLL_comm_t * comm, int tree_type, int k, TSP_sched_t * sched,
                                       int segsize, int finalize, int nbuffers)
 {
@@ -480,9 +481,9 @@ COLL_sched_reduce_tree_full_pipelined(const void *sendbuf, void *recvbuf, int co
 
         const char *send_buf = (is_inplace) ? sendbuf : (char *) sendbuf + offset * extent;     /* if it is in_place send_buf should remain MPI_INPLACE */
         COLL_sched_reduce_tree_full(send_buf, (char *) recvbuf + offset * extent, msgsize, datatype,
-                                    op, root, tag, comm, tree_type, k, sched, 1, nbuffers);
-
+                                    op, root, *tag, comm, tree_type, k, sched, 1, nbuffers);
         offset += msgsize;
+        (*tag)++; /*switch to the next tag*/
     }
 
     if (finalize) {

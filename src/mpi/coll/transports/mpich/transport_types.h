@@ -44,6 +44,7 @@ typedef struct MPIC_MPICH_aint_t {
 /* Data structure to store send or recv arguments */
 typedef struct MPIC_MPICH_sendrecv_arg_t {
     void *buf;
+    int tag_offt;
     int count;
     MPIC_MPICH_dt_t dt;
     /* Stores destination in case of send and source in case of recv call */
@@ -55,6 +56,7 @@ typedef struct MPIC_MPICH_sendrecv_arg_t {
 typedef struct MPIC_MPICH_recv_reduce_arg_t {
     void *inbuf;
     void *inoutbuf;
+    int tag_offt;
     int count;
     MPIC_MPICH_dt_t datatype;
     MPIC_MPICH_op_t op;
